@@ -1,0 +1,6 @@
+#!/bin/bash
+
+pandoc -s -t man vscpl2drv-mqtt.1.md -o vscpl2drv-mqtt.
+sudo cp vscpl2drv-mqtt. /usr/share/man/man1/
+
+mandb
