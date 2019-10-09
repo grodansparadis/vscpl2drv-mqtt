@@ -20,6 +20,41 @@ The configuration string have the following format
 
 The first configuration parameter is a unique id like "mysession22" for your connection. The second parameter tell if the intention is to subscribe (“subscribe”) to an existing MQTT channel or to publish (“publish”) events on a channel. The second parameter is the topic. This is a text string identifying the topic. It is recommended that this string starts with “vscp/”. Host is the host where the MQTT broker is located (defaults to "localhost:1883"). Note that port must be included in the hostname. User/password is credentials for the channel if they are needed.
 
+## Install the driver on Linux
+tbd
+
+## Install the driver on Windows
+tbd
+
+## How to build the driver on Linux
+To build this driver you have to first install the vscp common code. You do this with
+
+> git clone https://github.com/grodansparadis/vscp.git
+>
+In your .bashrc you then need to add the path to the location where the common code is located. Add
+
+> export VSCP_PATH=path-to-above-folder
+
+Now clone the driver source
+
+```
+git clone https://github.com/grodansparadis/vscpl2drv-mqtt.git
+cd vscpl2drv-mqtt
+./configure
+make
+make install
+```
+
+Default install folder is */usr/lib*
+
+You need build-essentials and git installed on your system
+
+>sudo apt update && sudo apt -y upgrade   
+>sudo apt install build-essential git
+
+## How to build the driver on Windows
+tbd
+
 ## Remote variables
 
 | Variable name  | Type    | Description   |
