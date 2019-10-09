@@ -5,8 +5,8 @@
 
 # General common files
 cd _vscp_common_general
-cp ${VSCP_PATH}/src/common/dllist.c .
-cp ${VSCP_PATH}/src/common/dllist.h .
+cp ${VSCP_PATH}/src/common/mongoose.c .
+cp ${VSCP_PATH}/src/common/mongoose.h .
 cp ${VSCP_PATH}/src/common/crc.h .
 cp ${VSCP_PATH}/src/common/crc.c .
 cp ${VSCP_PATH}/src/common/crc8.h .

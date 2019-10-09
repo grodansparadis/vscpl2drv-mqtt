@@ -35,6 +35,9 @@
 #include <vscp_class.h>
 #include <vscp_type.h>
 
+#include <set>
+#include <deque>
+
 #define MDF_ACCESS_READ 1
 #define MDF_ACCESS_WRITE 2
 
