@@ -33,21 +33,9 @@ mkdir debian
 tar -zxvf ../$NAME_PLUS_VER.tar.gz
 dh_make --single --defaultless -f ../$NAME_PLUS_VER.tar.gz -a -s -c mit -y
 cp -r ../debian_orig/* debian/
-#ls
+
 echo "---Now do 'dpkg-buildpackage -us -uc' or 'dpkg-buildpackage -b'"
 
-#cd $NAME_PLUS_VER
-#debuild clean
 debuild -us -uc
 
 echo "If all is alright check /tmp/__BUILD__/ for Debian package "
-
-#cp -r vscpl2drv-socketcan /tmp/__build__/vscpl2drv-socketcan-${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}
-#cd /tmp/__build__
-#tar czvf vscpl2drv-socketcan_${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}.tar.gz vscpl2drv-socketcan_${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}
-#rm -rf vscpl2drv-socketcan_${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}vscpl2drv-socketcan_${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}
-#tar xzvf vscpl2drv-socketcan_${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}.tar.gz
-#cd vscpl2drv-socketcan-${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}
-#dh_make -f ../vscpl2drv-socketcan_${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}.tar.gz
-#cp -r debian_orig/* debian
-#debuild -us -uc

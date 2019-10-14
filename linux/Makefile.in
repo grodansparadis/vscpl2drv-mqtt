@@ -129,7 +129,6 @@ vscpmd5.o: ../_vscp_common_general/vscpmd5.c ../_vscp_common_general/vscpmd5.h
 dllist.o: ../_vscp_common_general/dllist.c ../_vscp_common_general/dllist.h
 	$(CC) $(CFLAGS) -c ../_vscp_common_general/dllist.c -o $@
 
-
 install: all
 	$(STRIP) vscpl2drv-mqtt.so
 	$(INSTALL_DIR) $(VSCP_PROJ_BASE_DIR)/drivers/level2/
