@@ -131,7 +131,7 @@ install: all
 	$(STRIP) vscpl2drv-mqtt.so
 	$(INSTALL_DIR) $(DESTDIR)$(prefix)/lib/
 	$(INSTALL_PROGRAM) vscpl2drv-mqtt.so $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.so
-	$(INSTALL_PROGRAM) vscpl2drv-mqtt.a $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.a
+	$(INSTALL_PROGRAM) libvscpl2drv-mqtt.a $(DESTDIR)$(prefix)/lib/libvscpl2drv-mqtt.a
 
 uninstall:
 	rm -f $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.so
