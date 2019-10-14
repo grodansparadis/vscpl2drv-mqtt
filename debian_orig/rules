@@ -3,6 +3,6 @@
 %:
 	dh $@
 
-override_dh_auto_install:
-	strip linux/vscpl2drv-mqtt.so
-	install -D -m 0755 linux/vscpl2drv-mqtt.so $$(pwd)/debian/vscpl2drv-mqtt/srv/vscp/drivers/level2/vscpl2drv-mqtt.so
+#override_dh_auto_install:
+#	strip linux/vscpl2drv-mqtt.so
+#	install -D -m 0755 linux/vscpl2drv-mqtt.so $$(pwd)/debian/vscpl2drv-mqtt/srv/vscp/drivers/level2/vscpl2drv-mqtt.so
