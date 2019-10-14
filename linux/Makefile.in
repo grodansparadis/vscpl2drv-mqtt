@@ -132,12 +132,13 @@ dllist.o: ../_vscp_common_general/dllist.c ../_vscp_common_general/dllist.h
 
 install: all
 	$(STRIP) vscpl2drv-mqtt.so
-#	$(INSTALL_DIR) $(DESTDIR)$(prefix)/lib/
+	$(INSTALL_DIR) $(DESTDIR)$(prefix)/lib/
 	$(INSTALL_PROGRAM) vscpl2drv-mqtt.so $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.so
+	$(INSTALL_PROGRAM) vscpl2drv-mqtt.a $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.a
 
 uninstall:
-#	rm -f $(VSCP_PROJ_BASE_DIR)/drivers/level2/vscpl2drv-mqtt.so
 	rm -f $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.so
+	rm -f $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.a
 
 install-strip: install
 
