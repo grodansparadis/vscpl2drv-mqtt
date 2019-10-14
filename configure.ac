@@ -1,10 +1,10 @@
 dnl Autoconf settings for vscpl2drv-mqtt
 dnl $Id: configure.in,v 1.5 2017/10/13 11:22:06 akhe Exp $
 
-AC_INIT( [vscpl2drv-mqtt], [14.0.0], [akhe@grodansparadis.com])
+dnl Get version
+m4_builtin([include], VERSION.m4)
 
-CONFIGURE_LINE="$0 $*"
-CODENAME="Ant"
+AC_INIT( [vscpl2drv-mqtt], [package_version], [akhe@grodansparadis.com])
 
 AC_CONFIG_MACRO_DIR(m4)
 
@@ -34,7 +34,7 @@ AC_CHECK_LIB([crypto], [MD5_Init])
 AC_CHECK_LIB([m],[sin])
 AC_CHECK_LIB([rt],[clock_gettime])
 AC_CHECK_LIB([ssl], [SSL_free])
-AC_CHECK_LIB([expat], [XML_ParserCreate])
+#AC_CHECK_LIB([expat], [XML_ParserCreate])
 
 
 # Checks for header files.
@@ -82,11 +82,18 @@ AS_IF([test "$ac_cv_sizeof_long" -eq 8],
     [AC_DEFINE([OSBIT], 64, [Define to the size of a long in bits.])],
     [AC_DEFINE([OSBIT], 32, [Define to the size of a long in bits.])])
 
-AC_SUBST(VSCPDIR)
+AC_SUBST(DESTDIR)
 AC_SUBST(EXTRALIBS)
 AC_SUBST(STATIC)
+AC_SUBST(MAJOR_VERSION)
+AC_SUBST(MINOR_VERSION)
+AC_SUBST(RELEASE_VERSION)
+AC_SUBST(BUILD_VERSION)
 
-EXTRALIBS="${EXTRALIBS} ${LIBS}"
+MAJOR_VERSION=major_version
+MINOR_VERSION=minor_version
+RELEASE_VERSION=release_version
+BUILD_VERSION=build_version
 
 if test "${vscp_static}" = yes ; then
 STATIC="yes"
@@ -119,12 +126,12 @@ dnl
 dnl Project base installation folder
 dnl
 
-AC_ARG_VAR(VSCPDIR, Set base folder for installation (/srv/vscp) )
-if test "${VSCPDIR+set}" = set; then
-  echo "variable \$VSCPDIR is set to: $VSCPDIR"
+AC_ARG_VAR(DESTDIR, Set base folder for installation (/srv/vscp) )
+if test "${DESTDIR+set}" = set; then
+  echo "variable \$DESTDIR is set to: $DESTDIR"
 else
-  VSCPDIR="/srv/vscp"
-  echo "variable \$VSCPDIR is set to: $VSCPDIR"
+  DESTDIR="/srv/vscp/"
+  echo "variable \$DESTDIR is set to: $DESTDIR"
 fi
 
 dnl
@@ -144,7 +151,7 @@ AC_CONFIG_FILES([Makefile
          linux/Makefile
 ])
 
-EXTRALIBS="${EXTRALIBS} ${LIBS}"
+EXTRALIBS="${EXTRALIBS}"
 
 dnl Generate makefiles
 AC_OUTPUT
@@ -153,9 +160,17 @@ dnl Give user some feedback
 echo
 echo   "           VSCP configuration"
 echo   "--------------------------------------------"
-echo   "VSCP version     : `sh echo-version` (${PACKAGE_VERSION})"
+echo   "Version          : ${PACKAGE_VERSION} (major_version.minor_version.release_version.build_version)"
 echo   "System           : `uname -a` "
-echo   "VSCP install dir : ${VSCPDIR}"
+echo   "VSCP install dir : ${DESTDIR}"
+
+dnl echo   "${ax_enable_debug}"
+if test "${ax_enable_debug}" = "yes"
+then
+   echo "build flavour    : debug "
+else
+   echo "build flavour    : release "
+fi
 
 dnl Output some debugging information
 echo   "LIBS             : ${LIBS}"
@@ -164,13 +179,5 @@ echo   "EXTRACPPFLAGS    : ${CPPFLAGS}"
 echo   "EXTRACXXFLAGS    : ${CXXFLAGS}"
 echo   "EXTRACFLAGS      : ${CFLAGS}"
 echo   "PROJ_SUBDIRS     : ${PROJ_SUBDIRS}"
-
-dnl echo   "${ax_enable_debug}"
-if test "${ax_enable_debug}" = "yes"
-then
-   echo "build flavour   : debug "
-else
-   echo "build flavour   : release "
-fi
 
 dnl vi: set et sts=4 sw=4 com=\:dnl
