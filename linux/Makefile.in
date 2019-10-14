@@ -155,6 +155,7 @@ clean:
 	rm -f ../_vscp_common/*.o
 	rm -f ../_vscp_common_general/*.o
 	rm -f vscpl2drv-mqtt.so
+	rm -f libvscpl2drv-mqtt.a
 	rm -f test
 	rm -f *.deb
 	rm -f *.gz
