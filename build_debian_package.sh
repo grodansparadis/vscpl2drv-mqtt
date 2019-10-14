@@ -16,7 +16,7 @@ echo "---Creating build folder:"$BUILD_FOLDER
 mkdir -p $BUILD_FOLDER
 
 # Clean project
-make clean
+#make clean
 rm dist/*
 ./clean_for_dist
 

@@ -73,17 +73,14 @@ MQTT_OBJECTS = vscpl2drv_mqtt.o\
 
 ### Targets: ###
 
-all: vscpl2drv-mqtt.so test libvscpl2drv-mqtt.a
-
-# static lib
-libvscpl2drv-mqtt.a:	vscpl2drv-mqtt.so
-	ar rcs libvscpl2drv-mqtt.a $(MQTT_OBJECTS)
+all: vscpl2drv-mqtt.so test
 
 test:  test.o $(PROJOBJS)
 	$(CXX) -o $@ test.o $(PROJOBJS) $(LDFLAGS) $(LIBS) $(EXTRALIBS)
 
 vscpl2drv-mqtt.so: $(MQTT_OBJECTS)
 	$(CXX) -o $@ $(MQTT_OBJECTS) $(DLFLAGS) $(LIBS) $(EXTRALIBS)
+	ar rcs libvscpl2drv-mqtt.a $(MQTT_OBJECTS)
 
 mqttobj.o: ../common/mqttobj.cpp ../common/mqttobj.h
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c ../common/mqttobj.cpp -o $@

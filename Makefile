@@ -15,8 +15,8 @@ INSTALL = /usr/bin/install -c
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_DIR = /usr/bin/install -c -d
-PROJ_SUBDIRS=linux
-VSCP_PROJ_BASE_DIR=/srv/vscp/
+PROJ_SUBDIRS=linux 
+VSCP_PROJ_BASE_DIR=
 IPADDRESS :=  $(shell hostname -I)
 
 
@@ -25,26 +25,21 @@ all:
 	echo "Building in dir " $$d && echo "====================================================" && cd $$d && $(MAKE)); done
 
 
-install: all
+install:
 # Install sub components
 	@for d in $(PROJ_SUBDIRS); do (echo "====================================================" &&\
 	echo "Building in dir " $$d && echo "====================================================" && cd $$d && $(MAKE) install); done
 
-uninstall: all
+uninstall:
 # Uninstall sub components
 	@for d in $(PROJ_SUBDIRS); do (echo "====================================================" &&\
 	echo "Building in dir " $$d && echo "====================================================" && cd $$d && $(MAKE) uninstall); done
 
-man: all
+man:
 	@for d in $(PROJ_SUBDIRS); do (echo "====================================================" &&\
 	echo "Building in dir " $$d && echo "====================================================" && cd $$d && $(MAKE) man); done
 
-install-manpages:
-	@echo "- Installing man-pages."
-	cp man/(vscpl2drv-socketcan.1 /usr/share/man/man1/
-	mandb
-
-clean: all
+clean:
 	@for d in $(PROJ_SUBDIRS); do (cd $$d && $(MAKE) clean); done
 	rm -f config.log
 	rm -f config.startup

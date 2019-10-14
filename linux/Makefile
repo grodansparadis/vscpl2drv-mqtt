@@ -11,7 +11,8 @@ PACKAGE_VERSION=1.1.0
 
 # STATIC = yes if a static build is requested.
 STATIC=no
-VSCP_PROJ_BASE_DIR=/srv/vscp/
+VSCP_PROJ_BASE_DIR=
+DESTDIR=
 
 prefix = /usr/local
 exec_prefix = ${prefix}
@@ -33,9 +34,9 @@ CFLAGS = -std=c99  -DOPENSSL_API_1_1 -fPIC -DCBC -I.. -I../_vscp_common  -I../_v
 CXXFLAGS = -std=c++11 -D__LINUX__ -fPIC -D_REENTRANT   $(MONGOOSE_FLAGS)
 CPPFLAGS = -D__LINUX__ -fPIC   $(MONGOOSE_FLAGS) -fno-var-tracking-assignments -I.. -I../_vscp_common -I../_vscp_common_general
 
-LDFLAGS =
-LIBS = -lssl -lrt -lm -lcrypto -lpthread -ldl
-EXTRALIBS =
+LDFLAGS = 
+LIBS = -lssl -lrt -lm -lcrypto -lpthread -ldl 
+EXTRALIBS = 
 
 DLFLAGS = -g -shared -fPIC
 STRIP = strip
@@ -72,17 +73,18 @@ MQTT_OBJECTS = vscpl2drv_mqtt.o\
 
 ### Targets: ###
 
-all: vscpl2drv-mqtt.so test libvscpl2drv-mqtt.a
+all: vscpl2drv-mqtt.so test
 
 # static lib
-libvscpl2drv-mqtt.a:	vscpl2drv-mqtt.so
-	ar rcs libvscpl2drv-mqtt.a $(MQTT_OBJECTS)
+#libvscpl2drv-mqtt.a:  $(MQTT_OBJECTS)
+#	ar rcs libvscpl2drv-mqtt.a $(MQTT_OBJECTS)
 
 test:  test.o $(PROJOBJS)
 	$(CXX) -o $@ test.o $(PROJOBJS) $(LDFLAGS) $(LIBS) $(EXTRALIBS)
 
 vscpl2drv-mqtt.so: $(MQTT_OBJECTS)
 	$(CXX) -o $@ $(MQTT_OBJECTS) $(DLFLAGS) $(LIBS) $(EXTRALIBS)
+	ar rcs libvscpl2drv-mqtt.a $(MQTT_OBJECTS)
 
 mqttobj.o: ../common/mqttobj.cpp ../common/mqttobj.h
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c ../common/mqttobj.cpp -o $@
@@ -129,14 +131,15 @@ vscpmd5.o: ../_vscp_common_general/vscpmd5.c ../_vscp_common_general/vscpmd5.h
 dllist.o: ../_vscp_common_general/dllist.c ../_vscp_common_general/dllist.h
 	$(CC) $(CFLAGS) -c ../_vscp_common_general/dllist.c -o $@
 
-
 install: all
 	$(STRIP) vscpl2drv-mqtt.so
-	$(INSTALL_DIR) $(VSCP_PROJ_BASE_DIR)/drivers/level2/
-	$(INSTALL_PROGRAM) vscpl2drv-mqtt.so $(VSCP_PROJ_BASE_DIR)/drivers/level2/
+	$(INSTALL_DIR) $(DESTDIR)$(prefix)/lib/
+	$(INSTALL_PROGRAM) vscpl2drv-mqtt.so $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.so
+	$(INSTALL_PROGRAM) vscpl2drv-mqtt.a $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.a
 
 uninstall:
-	rm -rf $(VSCP_PROJ_BASE_DIR)/drivers/level2/vscpl2drv-mqtt.so
+	rm -f $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.so
+	rm -f $(DESTDIR)$(prefix)/lib/vscpl2drv-mqtt.a
 
 install-strip: install
 
@@ -156,6 +159,7 @@ clean:
 	rm -f ../_vscp_common/*.o
 	rm -f ../_vscp_common_general/*.o
 	rm -f vscpl2drv-mqtt.so
+	rm -f libvscpl2drv-mqtt.a
 	rm -f test
 	rm -f *.deb
 	rm -f *.gz
