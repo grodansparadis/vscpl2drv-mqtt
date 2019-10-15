@@ -12,4 +12,9 @@ include /usr/share/dpkg/default.mk
 #export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
 %:
-	dh $@
+	dh $@ --with autoreconf
+
+override_dh_auto_install:
+	strip linux/vscpl2drv-mqtt.so
+	install -D -m 0755 linux/vscpl2drv-mqtt.so $$(pwd)/debian/vscpl2drv-mqtt/srv/vscp/drivers/level2/vscpl2drv-mqtt.so
+	install -D -m 0755 linux/libvscpl2drv-mqtt.a $$(pwd)/debian/vscpl2drv-mqtt/srv/vscp/drivers/level2/libvscpl2drv-mqtt.a

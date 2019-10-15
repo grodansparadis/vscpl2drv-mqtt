@@ -6467,6 +6467,12 @@ fi
 
 
 
+if test "${DESTDIR+set}" = set; then
+   echo "variable \$DESTDIR is set to: $DESTDIR"
+ else
+   DESTDIR="/srv/vscp/"
+   echo "variable \$DESTDIR is set to: $DESTDIR"
+fi
 
 
 PROJ_SUBDIRS="linux "
