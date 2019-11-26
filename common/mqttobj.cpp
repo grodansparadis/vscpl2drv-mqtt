@@ -1006,7 +1006,7 @@ workerTread(void *pData)
                             }
 
                             // vscp_getVSCPMeasurementAsString( pEvent, str );
-                            vscp_writeVscpEventToString(pEvent, str);
+                            vscp_writeVscpEventToString(str,pEvent);
                             goto PUBLISH;
 
                             /*
@@ -1049,7 +1049,7 @@ workerTread(void *pData)
 
                 } else {
 
-                    vscp_writeVscpEventToString(pEvent, str);
+                    vscp_writeVscpEventToString(str,pEvent);
 
 PUBLISH:
 

@@ -30,11 +30,8 @@
 *.exe
 *.out
 *.app
+linux/test
 
-autom4te.cache/
-config.log
 
-dist/*
-
-Makefile
-linux/Makefile
+# Dist folder
+dist/

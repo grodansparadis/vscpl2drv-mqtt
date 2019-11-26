@@ -3,25 +3,25 @@
 # =========================================================================
 
 # Package version
-MAJOR_VERSION=@MAJOR_VERSION@
-MINOR_VERSION=@MINOR_VERSION@
-RELEASE_VERSION=@RELEASE_VERSION@
-BUILD_VERSION=@BUILD_VERSION@
-PACKAGE_VERSION=@PACKAGE_VERSION@
+MAJOR_VERSION=1
+MINOR_VERSION=1
+RELEASE_VERSION=0
+BUILD_VERSION=0
+PACKAGE_VERSION=1.1.0
 
 # STATIC = yes if a static build is requested.
-STATIC=@STATIC@
-VSCP_PROJ_BASE_DIR=@DESTDIR@
-DESTDIR=@DESTDIR@
+STATIC=no
+VSCP_PROJ_BASE_DIR=/srv/vscp/
+DESTDIR=/srv/vscp/
 
-prefix = @prefix@
-exec_prefix = @exec_prefix@
-INSTALL = @INSTALL@
-top_srcdir = @top_srcdir@
-top_builddir = @top_builddir@
+prefix = /usr/local
+exec_prefix = ${prefix}
+INSTALL = /usr/bin/install -c
+top_srcdir = ..
+top_builddir = ..
 
-CC = @CC@
-CXX = @CXX@
+CC = gcc
+CXX = g++
 
 WARNINGS_HARD = -Werror -Wall -Wextra -pedantic -Wcast-align -Wcast-qual \
   -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self \
@@ -36,18 +36,18 @@ WARNINGS = -Wall
 VERSION_DEFS = -DMAJOR_VERSION=$(MAJOR_VERSION) -DMINOR_VERSION=$(MINOR_VERSION) \
 	-DRELEASE_VERSION=$(RELEASE_VERSION) -DBUILD_VERSION=$(BUILD_VERSION)
 MONGOOSE_FLAGS = -DMG_ENABLE_THREADS -DMG_ENABLE_IPV6 -DMG_ENABLE_SSL -DMG_ENABLE_GETADDRINFO
-CFLAGS = -std=c99 @CFLAGS@ ${WARNINGS} -fPIC -DCBC -I..-I../vscp/src/vscp/common  -I../vscp/src/common \
+CFLAGS = -std=c99  -DOPENSSL_API_1_1 ${WARNINGS} -fPIC -DCBC -I..-I../vscp/src/vscp/common  -I../vscp/src/common \
 	-I../mongoose
-CXXFLAGS = -std=c++11 ${WARNINGS} -D__LINUX__ -fPIC -D_REENTRANT @CXXFLAGS@  $(MONGOOSE_FLAGS) -I../mongoose
-CPPFLAGS = -D__LINUX__ -fPIC @CPPFLAGS@  $(MONGOOSE_FLAGS) ${WARNINGS} -fno-var-tracking-assignments -I..\
+CXXFLAGS = -std=c++11 ${WARNINGS} -D__LINUX__ -fPIC -D_REENTRANT   $(MONGOOSE_FLAGS) -I../mongoose
+CPPFLAGS = -D__LINUX__ -fPIC   $(MONGOOSE_FLAGS) ${WARNINGS} -fno-var-tracking-assignments -I..\
  	-I../vscp/src/vscp/common -I../vscp/src/common -I../mongoose \
 	 -I../vscp/src/common/nlohmann \
 	$(VERSION_DEFS)
 
 
-LDFLAGS = @LDFLAGS@
-LIBS = @LIBS@
-EXTRALIBS = @EXTRALIBS@
+LDFLAGS = 
+LIBS = -lssl -lrt -lm -lcrypto -lpthread -ldl 
+EXTRALIBS = 
 
 DLFLAGS = -g -shared -fPIC
 STRIP = strip
