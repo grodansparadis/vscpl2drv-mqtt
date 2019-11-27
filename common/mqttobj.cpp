@@ -43,6 +43,7 @@
 #include <time.h>
 
 #include <mongoose.h>
+#include <mosquitto.h>
 
 #include <vscp_class.h>
 #include <vscp_type.h>
@@ -52,27 +53,27 @@
 #include "mqttobj.h"
 
 // Forward declarations
-void *
-workerTread(void *pData);
+void*
+workerTread(void* pData);
 
 ////////////////////////////////////////////////////////////////////////////////
 // ev_handler
 //
 
 static void
-ev_handler(struct mg_connection *nc, int ev, void *p)
+ev_handler(struct mg_connection* nc, int ev, void* p)
 {
     char username[80];
     char password[80];
-    struct mg_mqtt_message *msg = (struct mg_mqtt_message *)p;
-    Cmqttobj *pmqttobj          = (Cmqttobj *)nc->mgr->user_data;
+    struct mg_mqtt_message* msg = (struct mg_mqtt_message*)p;
+    Cmqttobj* pmqttobj = (Cmqttobj*)nc->mgr->user_data;
 
     switch (ev) {
 
         case MG_EV_CONNECT: {
             struct mg_send_mqtt_handshake_opts opts;
 
-            opts.flags      = MG_MQTT_CLEAN_SESSION;
+            opts.flags = MG_MQTT_CLEAN_SESSION;
             opts.keep_alive = pmqttobj->m_keepalive;
 
             // Username
@@ -100,13 +101,13 @@ ev_handler(struct mg_connection *nc, int ev, void *p)
             mg_set_protocol_mqtt(nc);
 
             if (pmqttobj->m_bSubscribe) {
-                opts.password  = NULL;
+                opts.password = NULL;
                 opts.user_name = NULL;
             } else {
-                opts.flags      = MG_MQTT_CLEAN_SESSION;
+                opts.flags = MG_MQTT_CLEAN_SESSION;
                 opts.keep_alive = 60;
-                opts.password   = NULL;
-                opts.user_name  = NULL;
+                opts.password = NULL;
+                opts.user_name = NULL;
 
                 mg_send_mqtt_handshake_opt(
                   nc, pmqttobj->m_sessionid.c_str(), opts);
@@ -149,14 +150,14 @@ ev_handler(struct mg_connection *nc, int ev, void *p)
         case MG_EV_MQTT_PUBLISH: {
             vscpEventEx eventEx;
 
-            eventEx.obid      = 0;
+            eventEx.obid = 0;
             eventEx.timestamp = vscp_makeTimeStamp();
             vscp_setEventExDateTimeBlockToNow(&eventEx);
             eventEx.head = VSCP_PRIORITY_NORMAL;
             memset(eventEx.GUID, 0, 16);
 
             if (!strncmp(msg->topic.p,
-                         (const char *)pmqttobj->m_topic.c_str(),
+                         (const char*)pmqttobj->m_topic.c_str(),
                          msg->topic.len)) {
 
                 char valbuf[512];
@@ -169,7 +170,7 @@ ev_handler(struct mg_connection *nc, int ev, void *p)
                     // Here the data will only be a value (Simple)
 
                     eventEx.vscp_class = pmqttobj->m_simple_vscpclass;
-                    eventEx.vscp_type  = pmqttobj->m_simple_vscptype;
+                    eventEx.vscp_type = pmqttobj->m_simple_vscptype;
 
                     switch (pmqttobj->m_simple_vscpclass) {
 
@@ -215,8 +216,8 @@ ev_handler(struct mg_connection *nc, int ev, void *p)
                             eventEx.data[3] = pmqttobj->m_simple_unit;
 
                             double val;
-                            val        = std::stod(str);
-                            uint8_t *p = (uint8_t *)&val;
+                            val = std::stod(str);
+                            uint8_t* p = (uint8_t*)&val;
 
                             if (vscp_isLittleEndian()) {
 
@@ -269,7 +270,7 @@ ev_handler(struct mg_connection *nc, int ev, void *p)
                                 float val = atof(str.c_str());
 
                                 val = VSCP_UINT32_SWAP_ON_LE(val);
-                                memcpy(eventEx.data + 1, (uint8_t *)&val, 4);
+                                memcpy(eventEx.data + 1, (uint8_t*)&val, 4);
 
                                 eventEx.data[0] =
                                   VSCP_DATACODING_SINGLE |
@@ -292,14 +293,14 @@ ev_handler(struct mg_connection *nc, int ev, void *p)
 
                     FEED_EVENT:
 
-                        vscpEvent *pEvent = new vscpEvent;
+                        vscpEvent* pEvent = new vscpEvent;
                         if (NULL != pEvent) {
 
                             pEvent->sizeData = 0;
-                            pEvent->pdata    = NULL;
+                            pEvent->pdata = NULL;
 
                             if (vscp_doLevel2FilterEx(
-                                  &eventEx, &pmqttobj->m_vscpfilter)) {
+                                  &eventEx, &pmqttobj->m_vscpfilterRx)) {
 
                                 if (vscp_convertVSCPfromEx(pEvent, &eventEx)) {
                                     pthread_mutex_lock(
@@ -325,7 +326,7 @@ ev_handler(struct mg_connection *nc, int ev, void *p)
             syslog(LOG_INFO, "VSCP MQTT Driver - Connection closed.\n");
 #endif
             pmqttobj->m_bConnected = false;
-            pmqttobj->m_bQuit      = true;
+            pmqttobj->m_bQuit = true;
     }
 }
 
@@ -335,26 +336,29 @@ ev_handler(struct mg_connection *nc, int ev, void *p)
 
 Cmqttobj::Cmqttobj()
 {
-    m_bQuit      = false;
+    m_bRead = false;
+    m_bWrite = false;
+    m_bQuit = false;
     m_bConnected = false;
     m_bSubscribe = true;
 
     m_sessionid = "default";
 
     // Simple
-    m_bSimplify          = false;
-    m_simple_vscpclass   = VSCP_CLASS1_MEASUREMENT;
-    m_simple_vscptype    = 0;
-    m_simple_coding      = 0;
-    m_simple_unit        = 0;
+    m_bSimplify = false;
+    m_simple_vscpclass = VSCP_CLASS1_MEASUREMENT;
+    m_simple_vscptype = 0;
+    m_simple_coding = 0;
+    m_simple_unit = 0;
     m_simple_sensorindex = 0;
-    m_simple_zone        = 0;
-    m_simple_subzone     = 0;
+    m_simple_index = 0;
+    m_simple_zone = 0;
+    m_simple_subzone = 0;
 
-    m_topic_list[0].qos   = 0;
+    m_topic_list[0].qos = 0;
     m_topic_list[0].topic = NULL,
 
-    vscp_clearVSCPFilter(&m_vscpfilter); // Accept all events
+    vscp_clearVSCPFilter(&m_vscpfilterRx); // Accept all events
 
     sem_init(&m_semSendQueue, 0, 0);
     sem_init(&m_semReceiveQueue, 0, 0);
@@ -378,94 +382,211 @@ Cmqttobj::~Cmqttobj()
     sem_destroy(&m_semReceiveQueue);
 }
 
+// ----------------------------------------------------------------------------
+
+/*
+    XML Setup
+    =========
+
+    <?xml version = "1.0" encoding = "UTF-8" ?>
+    <!-- Version 0.0.1    2019-11-05   -->
+    <config debug="true|false"
+            write="true|false"
+            guid="FF:FF:FF:FF:FF:FF:FF:FC:88:99:AA:BB:CC:DD:EE:FF"
+            filter="incoming-filter"
+            mask="incoming-mask"
+            sessionid=""
+            type="subscribe|publish"
+            topic="mqtt path"
+            prefix="mqtt part prefix"
+            remote-host=""
+            remotye-port=""
+            remote-user=""
+            remote-password=""
+            keepalive="true|false"
+            simple="true|false" >
+        <simple enable="true|false"
+                    vscpclass=""
+                    vscptype=""
+                    coding=""
+                    unit=""
+                    sensoridenx=""
+                    index=""
+                    zone=""
+                    subzone="" />
+    </config>
+    "topic" is optional. Publish default to "/vscp/class/type/guid", subscribe
+   defaults to "/vscp/ *". If given events are published as they are on topic.
+   "prefix" can be set to add a path before the default topic or a set topic.
+
+*/
+
+// ----------------------------------------------------------------------------
+
+int depth_setup_parser = 0;
+
+void
+startSetupParser(void* data, const char* name, const char** attr)
+{
+    Cmqttobj* pObj = (Cmqttobj*)data;
+    if (NULL == pObj)
+        return;
+
+    if ((0 == strcmp(name, "config")) && (0 == depth_setup_parser)) {
+
+        for (int i = 0; attr[i]; i += 2) {
+
+            std::string attribute = attr[i + 1];
+            vscp_trim(attribute);
+
+            if (0 == strcasecmp(attr[i], "debug")) {
+                if (!attribute.empty()) {
+                    vscp_makeUpper(attribute);
+                    if (std::string::npos != attribute.find("TRUE")) {
+                        pObj->m_bDebug = true;
+                    } else {
+                        pObj->m_bDebug = false;
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "access")) {
+                if (!attribute.empty()) {
+                    vscp_makeUpper(attribute);
+                    if (std::string::npos != attribute.find("W")) {
+                        pObj->m_bWrite = true;
+                    } else {
+                        pObj->m_bWrite = false;
+                    }
+                    if (std::string::npos != attribute.find("R")) {
+                        pObj->m_bRead = true;
+                    } else {
+                        pObj->m_bRead = false;
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "rxfilter")) {
+                if (!attribute.empty()) {
+                    if (!vscp_readFilterFromString(&pObj->m_vscpfilterRx,
+                                                   attribute)) {
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-automation] Unable to read event "
+                               "receive filter.");
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "rxmask")) {
+                if (!attribute.empty()) {
+                    if (!vscp_readMaskFromString(&pObj->m_vscpfilterRx,
+                                                 attribute)) {
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-automation] Unable to read event "
+                               "receive mask.");
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "txfilter")) {
+                if (!attribute.empty()) {
+                    if (!vscp_readFilterFromString(&pObj->m_vscpfilterTx,
+                                                   attribute)) {
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-automation] Unable to read event "
+                               "transmit filter.");
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "txmask")) {
+                if (!attribute.empty()) {
+                    if (!vscp_readMaskFromString(&pObj->m_vscpfilterTx,
+                                                 attribute)) {
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-automation] Unable to read event "
+                               "transmit mask.");
+                    }
+                }
+            }
+        }
+    }
+
+    depth_setup_parser++;
+}
+
+void
+endSetupParser(void* data, const char* name)
+{
+    depth_setup_parser--;
+}
+
+// ----------------------------------------------------------------------------
+
 //////////////////////////////////////////////////////////////////////
 // open
 //
-//
 
 bool
-Cmqttobj::open(const char *pUsername,
-               const char *pPassword,
-               const char *pHost,
-               const char *pPrefix,
-               const char *pConfig)
+Cmqttobj::open(std::string& pathcfg, cguid& guid)
 {
-    // *** All variables must be dynamic because of multientrance
-
-    std::string str;
-    std::string strName;
-
-    m_username = std::string(pUsername);
-    m_password = std::string(pPassword);
-    m_host     = std::string(pHost);
-    m_prefix   = std::string(pPrefix);
-
     // Parse the configuration string. It should
     // have the following form
     // "sessionid";“subscribe”|”publish”;channel;host:port;user;password;keepalive;filter;mask
     //
-    std::deque<std::string> tokens;
-    vscp_split(tokens, pConfig, ";");
+    // std::deque<std::string> tokens;
+    // vscp_split(tokens, pConfig, ";");
 
-    // Session id
-    if (!tokens.empty()) {
-        m_sessionid = tokens.front();
-        tokens.pop_front();
-    }
+    // // Session id
+    // if (!tokens.empty()) {
+    //     m_sessionid = tokens.front();
+    //     tokens.pop_front();
+    // }
 
-    // Check if we should publish or subscribe
-    if (!tokens.empty()) {
-        // Check for *subscribe*/publish
-        str = tokens.front();
-        tokens.pop_front();
-        vscp_trim(str);
-        if (0 == vscp_strcasecmp(str.c_str(), "PUBLISH")) {
-            m_bSubscribe = false;
-        }
-    }
+    // // Check if we should publish or subscribe
+    // if (!tokens.empty()) {
+    //     // Check for *subscribe*/publish
+    //     str = tokens.front();
+    //     tokens.pop_front();
+    //     vscp_trim(str);
+    //     if (0 == vscp_strcasecmp(str.c_str(), "PUBLISH")) {
+    //         m_bSubscribe = false;
+    //     }
+    // }
 
-    // Get topic from configuration string
-    if (!tokens.empty()) {
-        m_topic = tokens.front();
-        tokens.pop_front();
-    }
+    // // Get topic from configuration string
+    // if (!tokens.empty()) {
+    //     m_topic = tokens.front();
+    //     tokens.pop_front();
+    // }
 
-    // Get MQTT host from configuration string
-    if (!tokens.empty()) {
-        m_hostMQTT = tokens.front();
-        tokens.pop_front();
-    }
+    // // Get MQTT host from configuration string
+    // if (!tokens.empty()) {
+    //     m_hostMQTT = tokens.front();
+    //     tokens.pop_front();
+    // }
 
-    // Get MQTT user from configuration string
-    if (!tokens.empty()) {
-        m_usernameMQTT = tokens.front();
-        tokens.pop_front();
-    }
+    // // Get MQTT user from configuration string
+    // if (!tokens.empty()) {
+    //     m_usernameMQTT = tokens.front();
+    //     tokens.pop_front();
+    // }
 
-    // Get MQTT password from configuration string
-    if (!tokens.empty()) {
-        m_passwordMQTT = tokens.front();
-        tokens.pop_front();
-    }
+    // // Get MQTT password from configuration string
+    // if (!tokens.empty()) {
+    //     m_passwordMQTT = tokens.front();
+    //     tokens.pop_front();
+    // }
 
-    // Get MQTT keep alive from configuration string
-    if (!tokens.empty()) {
-        m_keepalive = vscp_readStringValue(tokens.front());
-        tokens.pop_front();
-    }
+    // // Get MQTT keep alive from configuration string
+    // if (!tokens.empty()) {
+    //     m_keepalive = vscp_readStringValue(tokens.front());
+    //     tokens.pop_front();
+    // }
 
-    // First log on to the host and get configuration
-    // variables
+    // // First log on to the host and get configuration
+    // // variables
 
-    if (VSCP_ERROR_SUCCESS != m_srv.doCmdOpen(m_host, m_username, m_password)) {
-        syslog(LOG_ERR,
-               "Unable to connect to VSCP TCP/IP interface. Terminating!");
-        return false;
-    }
+    // if (VSCP_ERROR_SUCCESS != m_srv.doCmdOpen(m_host, m_username,
+    // m_password)) {
+    //     syslog(LOG_ERR,
+    //            "Unable to connect to VSCP TCP/IP interface. Terminating!");
+    //     return false;
+    // }
 
-    // Find the channel id
-    uint32_t ChannelID;
-    m_srv.doCmdGetChannelID(&ChannelID);
+    // // Find the channel id
+    // uint32_t ChannelID;
+    // m_srv.doCmdGetChannelID(&ChannelID);
 
     // The server should hold configuration data for each sensor
     // we want to monitor.
@@ -518,65 +639,65 @@ Cmqttobj::open(const char *pUsername,
     //              over MQTT as just a number possibly using the topic as
     //              a way to tell what is sent.
 
-    strName = m_prefix + std::string("_sessionid");
-    if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-        m_sessionid = str;
-    }
+    // strName = m_prefix + std::string("_sessionid");
+    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
+    //     m_sessionid = str;
+    // }
 
-    strName = m_prefix + std::string("_type");
-    m_srv.getRemoteVariableValue(strName, str);
+    // strName = m_prefix + std::string("_type");
+    // m_srv.getRemoteVariableValue(strName, str);
 
-    // Check for subscribe/publish
-    vscp_trim(str);
-    if (0 == vscp_strcasecmp(str.c_str(), "publish")) {
-        m_bSubscribe = false;
-    }
+    // // Check for subscribe/publish
+    // vscp_trim(str);
+    // if (0 == vscp_strcasecmp(str.c_str(), "publish")) {
+    //     m_bSubscribe = false;
+    // }
 
-    strName = m_prefix + std::string("_topic");
-    if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-        m_topic = str;
-    }
+    // strTopic = m_prefix + std::string("_topic");
+    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
+    //     m_topic = str;
+    // }
 
-    strName = m_prefix + std::string("_host");
-    if (VSCP_ERROR_SUCCESS ==
-        m_srv.getRemoteVariableValue(strName, m_hostMQTT)) {
-        m_hostMQTT = str;
-    }
+    // strName = m_prefix + std::string("_host");
+    // if (VSCP_ERROR_SUCCESS ==
+    //     m_srv.getRemoteVariableValue(strName, m_hostMQTT)) {
+    //     m_hostMQTT = str;
+    // }
 
-    strName = m_prefix + std::string("_username");
-    if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-        m_usernameMQTT = str;
-    }
+    // strName = m_prefix + std::string("_username");
+    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
+    //     m_usernameMQTT = str;
+    // }
 
-    strName = m_prefix + std::string("_password");
-    if (VSCP_ERROR_SUCCESS ==
-        m_srv.getRemoteVariableValue(strName, m_passwordMQTT)) {
-        m_passwordMQTT = str;
-    }
+    // strName = m_prefix + std::string("_password");
+    // if (VSCP_ERROR_SUCCESS ==
+    //     m_srv.getRemoteVariableValue(strName, m_passwordMQTT)) {
+    //     m_passwordMQTT = str;
+    // }
 
-    strName   = m_prefix + std::string("_keepalive");
-    int *pint = new int;
-    assert(NULL != pint);
-    if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableInt(strName, pint)) {
-        m_keepalive = *pint;
-    }
+    // strName = m_prefix + std::string("_keepalive");
+    // int* pint = new int;
+    // assert(NULL != pint);
+    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableInt(strName, pint)) {
+    //     m_keepalive = *pint;
+    // }
 
-    strName = m_prefix + std::string("_qos");
-    if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableInt(strName, pint)) {
-        m_topic_list[0].qos = *pint;
-    }
+    // strName = m_prefix + std::string("_qos");
+    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableInt(strName, pint)) {
+    //     m_topic_list[0].qos = *pint;
+    // }
 
-    delete pint;
+    // delete pint;
 
-    strName = m_prefix + std::string("_filter");
-    if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-        vscp_readFilterFromString(&m_vscpfilter, str);
-    }
+    // strName = m_prefix + std::string("_filter");
+    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
+    //     vscp_readFilterFromString(&m_vscpfilter, str);
+    // }
 
-    strName = m_prefix + std::string("_mask");
-    if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-        vscp_readMaskFromString(&m_vscpfilter, str);
-    }
+    // strName = m_prefix + std::string("_mask");
+    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
+    //     vscp_readMaskFromString(&m_vscpfilter, str);
+    // }
 
     // Type = 0
     // ====================================================================
@@ -596,155 +717,157 @@ Cmqttobj::open(const char *pUsername,
     // subzone(0-255)
     //
 
-    strName = m_prefix + std::string("_simplify");
-    if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-        m_simplify = str;
-    }
+    // strName = m_prefix + std::string("_simplify");
+    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
+    //     m_simplify = str;
+    // }
 
-    if (m_simplify.length()) {
+    // if (m_simplify.length()) {
 
-        m_bSimplify = true;
-        std::deque<std::string> tokensSimple;
-        vscp_split(tokensSimple, m_simplify, ",");
+    //     m_bSimplify = true;
+    //     std::deque<std::string> tokensSimple;
+    //     vscp_split(tokensSimple, m_simplify, ",");
 
-        // simple type
-        if (!tokensSimple.empty()) {
-            m_simple_vscpclass = vscp_readStringValue(tokensSimple.front());
-            tokensSimple.pop_front();
-        }
+    //     // simple type
+    //     if (!tokensSimple.empty()) {
+    //         m_simple_vscpclass = vscp_readStringValue(tokensSimple.front());
+    //         tokensSimple.pop_front();
+    //     }
 
-        switch (m_simple_vscpclass) {
+    //     switch (m_simple_vscpclass) {
 
-            case VSCP_CLASS2_MEASUREMENT_STR:
+    //         case VSCP_CLASS2_MEASUREMENT_STR:
 
-                // simple vscp-type
-                if (!tokensSimple.empty()) {
-                    m_simple_vscptype =
-                      vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple vscp-type
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_vscptype =
+    //                   vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                // simple sensorindex
-                if (!tokensSimple.empty()) {
-                    m_simple_sensorindex =
-                      vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple sensorindex
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_sensorindex =
+    //                   vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                // simple unit
-                if (!tokensSimple.empty()) {
-                    m_simple_unit = vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple unit
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_unit = vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                // simple zone
-                if (!tokensSimple.empty()) {
-                    m_simple_zone = vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple zone
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_zone = vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                // simple subzone
-                if (!tokensSimple.empty()) {
-                    m_simple_subzone =
-                      vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple subzone
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_subzone =
+    //                   vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                break;
+    //             break;
 
-            case VSCP_CLASS2_MEASUREMENT_FLOAT:
+    //         case VSCP_CLASS2_MEASUREMENT_FLOAT:
 
-                // simple vscp-type
-                if (!tokensSimple.empty()) {
-                    m_simple_vscptype =
-                      vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple vscp-type
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_vscptype =
+    //                   vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                // simple sensorindex
-                if (!tokensSimple.empty()) {
-                    m_simple_sensorindex =
-                      vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple sensorindex
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_sensorindex =
+    //                   vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                // simple unit
-                if (!tokensSimple.empty()) {
-                    m_simple_unit = vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple unit
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_unit = vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                // simple zone
-                if (!tokensSimple.empty()) {
-                    m_simple_zone = vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple zone
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_zone = vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                // simple subzone
-                if (!tokensSimple.empty()) {
-                    m_simple_subzone =
-                      vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple subzone
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_subzone =
+    //                   vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                break;
+    //             break;
 
-            case VSCP_CLASS1_MEASUREMENT:
-            default:
+    //         case VSCP_CLASS1_MEASUREMENT:
+    //         default:
 
-                // simple vscp-type
-                if (!tokensSimple.empty()) {
-                    m_simple_vscptype =
-                      vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
+    //             // simple vscp-type
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_vscptype =
+    //                   vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
 
-                // Coding
-                if (!tokensSimple.empty()) {
-                    std::string strcoding = tokensSimple.front();
-                    tokensSimple.pop_front();
-                    vscp_trim(strcoding);
-                    m_simple_coding = VSCP_DATACODING_STRING;
-                    if (0 == vscp_strcasecmp(str.c_str(), "FLOAT")) {
-                        m_simple_coding = VSCP_DATACODING_SINGLE;
-                    }
-                }
+    //             // Coding
+    //             if (!tokensSimple.empty()) {
+    //                 std::string strcoding = tokensSimple.front();
+    //                 tokensSimple.pop_front();
+    //                 vscp_trim(strcoding);
+    //                 m_simple_coding = VSCP_DATACODING_STRING;
+    //                 if (0 == vscp_strcasecmp(str.c_str(), "FLOAT")) {
+    //                     m_simple_coding = VSCP_DATACODING_SINGLE;
+    //                 }
+    //             }
 
-                // simple sensorindex
-                if (!tokensSimple.empty()) {
-                    m_simple_sensorindex =
-                      vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
-                if (m_simple_sensorindex > 7) m_simple_sensorindex = 7;
+    //             // simple sensorindex
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_sensorindex =
+    //                   vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
+    //             if (m_simple_sensorindex > 7)
+    //                 m_simple_sensorindex = 7;
 
-                // simple unit
-                if (!tokensSimple.empty()) {
-                    m_simple_unit = vscp_readStringValue(tokensSimple.front());
-                    tokensSimple.pop_front();
-                }
-                if (m_simple_unit > 7) m_simple_unit = 7;
+    //             // simple unit
+    //             if (!tokensSimple.empty()) {
+    //                 m_simple_unit = vscp_readStringValue(tokensSimple.front());
+    //                 tokensSimple.pop_front();
+    //             }
+    //             if (m_simple_unit > 7)
+    //                 m_simple_unit = 7;
 
-                break;
-        }
+    //             break;
+    //     }
 
-    } else {
-        m_bSimplify = false;
-    }
+    // } else {
+    //     m_bSimplify = false;
+    // }
 
     if (m_bSubscribe) {
         // QOS set from variable read or constructor
         m_topic_list[0].topic = new char(m_topic.length() + 1);
         assert(NULL != m_topic_list[0].topic);
         if (NULL != m_topic_list[0].topic) {
-            memset((void *)m_topic_list[0].topic, 0, m_topic.length() + 1);
+            memset((void*)m_topic_list[0].topic, 0, m_topic.length() + 1);
             memcpy(
-              (void *)m_topic_list[0].topic, m_topic.c_str(), m_topic.length());
+              (void*)m_topic_list[0].topic, m_topic.c_str(), m_topic.length());
         }
     }
 
     // Close the channel
-    m_srv.doCmdClose();
+    // m_srv.doCmdClose();
 
     // start the worker thread
     m_pWrkObj = new CWrkThreadObj();
@@ -770,7 +893,8 @@ void
 Cmqttobj::close(void)
 {
     // Do nothing if already terminated
-    if (m_bQuit) return;
+    if (m_bQuit)
+        return;
 
     m_bQuit = true; // terminate the thread
     sleep(1);       // Give the thread some time to terminate
@@ -781,10 +905,10 @@ Cmqttobj::close(void)
 //
 
 bool
-Cmqttobj::addEvent2SendQueue(const vscpEvent *pEvent)
+Cmqttobj::addEvent2SendQueue(const vscpEvent* pEvent)
 {
     pthread_mutex_lock(&m_mutexSendQueue);
-    m_sendList.push_back((vscpEvent *)pEvent);
+    m_sendList.push_back((vscpEvent*)pEvent);
     sem_post(&m_semSendQueue);
     pthread_mutex_unlock(&m_mutexSendQueue);
     return true;
@@ -808,33 +932,32 @@ CWrkThreadObj::~CWrkThreadObj()
 // Workerthread
 //
 
-void *
-workerTread(void *pData)
+void*
+workerTread(void* pData)
 {
     int cnt_poll = 0;
     std::string str;
-    struct mg_connection *nc;
-    struct mg_mgr *pmgr = new mg_mgr;
+    struct mg_connection* nc;
+    struct mg_mgr* pmgr = new mg_mgr;
     assert(NULL != pmgr);
     uint16_t msgid = 0;
 
-    if ( NULL == pData ) {
+    if (NULL == pData) {
         syslog(LOG_ERR, "Missing thread object!");
         return NULL;
     }
 
-    Cmqttobj *pObj = (Cmqttobj *)pData;
+    Cmqttobj* pObj = (Cmqttobj*)pData;
 
     // mgr.user_data = m_pObj;
     mg_mgr_init(pmgr, pObj);
 
-    if (NULL == (nc = mg_connect(pmgr,
-                                 (const char *)pObj->m_hostMQTT.c_str(),
-                                 ev_handler))) {
+    if (NULL == (nc = mg_connect(
+                   pmgr, (const char*)pObj->m_hostMQTT.c_str(), ev_handler))) {
 #ifdef DEBUG
         fprintf(stderr,
                 "ns_connect(%s) failed\n",
-                (const char *)m_pObj->m_hostMQTT.c_str());
+                (const char*)m_pObj->m_hostMQTT.c_str());
 #endif
 #ifndef WIN32
         syslog(LOG_INFO, "VSCP MQTTT Driver - ns_connet failed\n");
@@ -886,7 +1009,7 @@ workerTread(void *pData)
             }
 
             struct timespec ts;
-            ts.tv_sec  = 0;
+            ts.tv_sec = 0;
             ts.tv_nsec = 10000; // 10 ms
             if (ETIMEDOUT == sem_timedwait(&pObj->m_semSendQueue, &ts)) {
                 continue;
@@ -895,10 +1018,11 @@ workerTread(void *pData)
             if (pObj->m_sendList.size()) {
 
                 pthread_mutex_lock(&pObj->m_mutexSendQueue);
-                vscpEvent *pEvent = pObj->m_sendList.front();
+                vscpEvent* pEvent = pObj->m_sendList.front();
                 pObj->m_sendList.pop_front();
                 pthread_mutex_unlock(&pObj->m_mutexSendQueue);
-                if (NULL == pEvent) continue;
+                if (NULL == pEvent)
+                    continue;
 
                 // If simple there must also be data
                 if (pObj->m_bSimplify && (NULL != pEvent->pdata)) {
@@ -975,14 +1099,14 @@ workerTread(void *pData)
                                 break;
                             }
 
-                            uint8_t *p = pEvent->pdata + 4;
+                            uint8_t* p = pEvent->pdata + 4;
                             if (vscp_isLittleEndian()) {
                                 for (int i = 7; i > 0; i--) {
                                     pEvent->pdata[4 + 7 - i] = *(p + i);
                                 }
                             }
 
-                            double val = *((double *)(pEvent->pdata + 4));
+                            double val = *((double*)(pEvent->pdata + 4));
                             char buf[80];
                             sprintf(buf, "%g", val);
                             str = std::string(buf);
@@ -1006,7 +1130,7 @@ workerTread(void *pData)
                             }
 
                             // vscp_getVSCPMeasurementAsString( pEvent, str );
-                            vscp_writeVscpEventToString(str,pEvent);
+                            vscp_writeVscpEventToString(str, pEvent);
                             goto PUBLISH;
 
                             /*
@@ -1049,15 +1173,15 @@ workerTread(void *pData)
 
                 } else {
 
-                    vscp_writeVscpEventToString(str,pEvent);
+                    vscp_writeVscpEventToString(str, pEvent);
 
-PUBLISH:
+                PUBLISH:
 
                     mg_mqtt_publish(nc,
                                     pObj->m_topic.c_str(),
                                     msgid++,
                                     MG_MQTT_QOS(pObj->m_topic_list[0].qos),
-                                    (const char *)str.c_str(),
+                                    (const char*)str.c_str(),
                                     str.length());
                 }
 

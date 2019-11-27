@@ -46,7 +46,7 @@ CPPFLAGS = -D__LINUX__ -fPIC   $(MONGOOSE_FLAGS) ${WARNINGS} -fno-var-tracking-a
 
 
 LDFLAGS = 
-LIBS = -lssl -lrt -lm -lcrypto -lpthread -ldl 
+LIBS = -lmosquitto -lexpat -lssl -lrt -lm -lcrypto -lpthread -ldl 
 EXTRALIBS = 
 
 DLFLAGS = -g -shared -fPIC

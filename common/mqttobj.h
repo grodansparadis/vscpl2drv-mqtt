@@ -63,11 +63,7 @@ class Cmqttobj
         Open
         @return True on success.
      */
-    bool open(const char *pUsername,
-              const char *pPassword,
-              const char *pHost,
-              const char *pPrefix,
-              const char *pConfig);
+    bool open(std::string& pathcfg, cguid& guid);
 
     /*!
         Flush and close the log file
@@ -80,8 +76,18 @@ class Cmqttobj
     bool addEvent2SendQueue(const vscpEvent *pEvent);
 
   public:
+
     /// Run flag
     bool m_bQuit;
+
+    /// True enables debug output to syslog
+    bool m_bDebug;
+
+    /// True if config can be read onm command
+    bool m_bRead;
+
+    /// True if config can be written on comand
+    bool m_bWrite;
 
     /// Connected flag
     bool m_bConnected;
@@ -142,8 +148,11 @@ class Cmqttobj
     /// Unit for simple channel handling
     uint8_t m_simple_unit;
 
-    /// Unit for simple channel handling
+    /// Sensor index for simple channel handling
     uint8_t m_simple_sensorindex;
+
+    /// Event index for simple channel handling
+    uint8_t m_simple_index;
 
     /// zone for simple channel handling
     uint8_t m_simple_zone;
@@ -156,8 +165,11 @@ class Cmqttobj
     */
     int m_keepalive;
 
-    /// Filter
-    vscpEventFilter m_vscpfilter;
+    /// Receive Filter
+    vscpEventFilter m_vscpfilterRx;
+
+    /// Transmit Filter
+    vscpEventFilter m_vscpfilterTx;
 
     // Thread worker object
     CWrkThreadObj *m_pWrkObj;

@@ -25,8 +25,8 @@
 //#pragma implementation
 #endif
 
-#include <string>
 #include <map>
+#include <string>
 
 #include <pthread.h>
 #include <semaphore.h>
@@ -47,7 +47,7 @@ void
 _fini() __attribute__((destructor));
 
 // This map holds driver handles/objects
-static std::map<long, Cmqttobj *> g_ifMap;
+static std::map<long, Cmqttobj*> g_ifMap;
 
 // Mutex for the map object
 static pthread_mutex_t g_mapMutex;
@@ -70,18 +70,19 @@ void
 _fini()
 {
     // If empty - nothing to do
-    if (g_ifMap.empty()) return;
+    if (g_ifMap.empty())
+        return;
 
     // Remove orphan objects
 
     LOCK_MUTEX(g_mapMutex);
 
-    for (std::map<long, Cmqttobj *>::iterator it = g_ifMap.begin();
+    for (std::map<long, Cmqttobj*>::iterator it = g_ifMap.begin();
          it != g_ifMap.end();
          ++it) {
         // std::cout << it->first << " => " << it->second << '\n';
 
-        Cmqttobj *pif = it->second;
+        Cmqttobj* pif = it->second;
         if (NULL != pif) {
             pif->m_srv.doCmdClose();
             delete pif;
@@ -100,16 +101,17 @@ _fini()
 //
 
 long
-addDriverObject(Cmqttobj *pif)
+addDriverObject(Cmqttobj* pif)
 {
-    std::map<long, Cmqttobj *>::iterator it;
+    std::map<long, Cmqttobj*>::iterator it;
     long h = 0;
 
     LOCK_MUTEX(g_mapMutex);
 
     // Find free handle
     while (true) {
-        if (g_ifMap.end() == (it = g_ifMap.find(h))) break;
+        if (g_ifMap.end() == (it = g_ifMap.find(h)))
+            break;
         h++;
     };
 
@@ -125,14 +127,15 @@ addDriverObject(Cmqttobj *pif)
 // getDriverObject
 //
 
-Cmqttobj *
+Cmqttobj*
 getDriverObject(long h)
 {
-    std::map<long, Cmqttobj *>::iterator it;
+    std::map<long, Cmqttobj*>::iterator it;
     long idx = h - 1681;
 
     // Check if valid handle
-    if (idx < 0) return NULL;
+    if (idx < 0)
+        return NULL;
 
     it = g_ifMap.find(idx);
     if (it != g_ifMap.end()) {
@@ -149,16 +152,17 @@ getDriverObject(long h)
 void
 removeDriverObject(long h)
 {
-    std::map<long, Cmqttobj *>::iterator it;
+    std::map<long, Cmqttobj*>::iterator it;
     long idx = h - 1681;
 
     // Check if valid handle
-    if (idx < 0) return;
+    if (idx < 0)
+        return;
 
     LOCK_MUTEX(g_mapMutex);
     it = g_ifMap.find(idx);
     if (it != g_ifMap.end()) {
-        Cmqttobj *pObj = it->second;
+        Cmqttobj* pObj = it->second;
         if (NULL != pObj) {
             delete pObj;
             pObj = NULL;
@@ -177,20 +181,17 @@ removeDriverObject(long h)
 //
 
 extern "C" long
-VSCPOpen(const char *pUsername,
-         const char *pPassword,
-         const char *pHost,
-         short port,
-         const char *pPrefix,
-         const char *pParameter,
-         unsigned long flags)
+VSCPOpen(const char* pPathConfig, const char* pguid)
 {
     long h = 0;
 
-    Cmqttobj *pdrvObj = new Cmqttobj();
+    Cmqttobj* pdrvObj = new Cmqttobj();
     if (NULL != pdrvObj) {
 
-        if (pdrvObj->open(pUsername, pPassword, pHost, pPrefix, pParameter)) {
+        std::string cfg(pPathConfig);
+        cguid guid(pguid);
+
+        if (pdrvObj->open(cfg, guid)) {
 
             if (!(h = addDriverObject(pdrvObj))) {
                 delete pdrvObj;
@@ -211,52 +212,75 @@ VSCPOpen(const char *pUsername,
 extern "C" int
 VSCPClose(long handle)
 {
-    Cmqttobj *pdrvObj = getDriverObject(handle);
-    if (NULL == pdrvObj) return 0;
+    Cmqttobj* pdrvObj = getDriverObject(handle);
+    if (NULL == pdrvObj)
+        return 0;
     pdrvObj->close();
     removeDriverObject(handle);
     return CANAL_ERROR_SUCCESS;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  VSCPBlockingSend
+//  VSCPWrite
 //
 
 extern "C" int
-VSCPBlockingSend(long handle, const vscpEvent *pEvent, unsigned long timeout)
+VSCPWrite(long handle, const vscpEvent* pEvent, unsigned long timeout)
 {
-    Cmqttobj *pdrvObj = getDriverObject(handle);
-    if (NULL == pdrvObj) return CANAL_ERROR_MEMORY;
+    Cmqttobj* pdrvObj = getDriverObject(handle);
+    if (NULL == pdrvObj)
+        return CANAL_ERROR_MEMORY;
     pdrvObj->addEvent2SendQueue(pEvent);
 
     return CANAL_ERROR_SUCCESS;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  VSCPBlockingReceive
+//  VSCPRead
 //
 
 extern "C" int
-VSCPBlockingReceive(long handle, vscpEvent *pEvent, unsigned long timeout)
+VSCPRead(long handle, vscpEvent* pEvent, unsigned long timeout)
 {
     // Check pointer
-    if (NULL == pEvent) return CANAL_ERROR_PARAMETER;
+    if (NULL == pEvent)
+        return CANAL_ERROR_PARAMETER;
 
-    Cmqttobj *pdrvObj = getDriverObject(handle);
-    if (NULL == pdrvObj) return CANAL_ERROR_MEMORY;
+    Cmqttobj* pdrvObj = getDriverObject(handle);
+    if (NULL == pdrvObj)
+        return CANAL_ERROR_MEMORY;
 
     struct timespec ts;
-    ts.tv_sec  = 0;
+    ts.tv_sec = 0;
     ts.tv_nsec = timeout * 1000;
-    if (ETIMEDOUT == sem_timedwait(&pdrvObj->m_semReceiveQueue, &ts)) {
-        return CANAL_ERROR_TIMEOUT;
+
+    int rv;
+    if (-1 == (rv = sem_timedwait(&pdrvObj->m_semReceiveQueue, &ts))) {
+        if (ETIMEDOUT == errno) {
+            return CANAL_ERROR_TIMEOUT;
+        } else if (EINTR == errno) {
+            syslog(LOG_ERR,
+                   "[vscpl2drv-automation] Interrupted by a signal handler");
+            return CANAL_ERROR_INTERNAL;
+        } else if (EINVAL == errno) {
+            syslog(LOG_ERR,
+                   "[vscpl2drv-automation] Invalid semaphore (timout)");
+            return CANAL_ERROR_INTERNAL;
+        } else if (EAGAIN == errno) {
+            syslog(LOG_ERR, "[vscpl2drv-automation] Blocking error");
+            return CANAL_ERROR_INTERNAL;
+        } else {
+            syslog(LOG_ERR, "[vscpl2drv-automation] Unknown error");
+            return CANAL_ERROR_INTERNAL;
+        }
     }
 
-    pthread_mutex_lock( &pdrvObj->m_mutexReceiveQueue);
-    vscpEvent *pLocalEvent = pdrvObj->m_receiveList.front();
+    pthread_mutex_lock(&pdrvObj->m_mutexReceiveQueue);
+    vscpEvent* pLocalEvent = pdrvObj->m_receiveList.front();
     pdrvObj->m_receiveList.pop_front();
-    pthread_mutex_unlock( &pdrvObj->m_mutexReceiveQueue);
-    if (NULL == pLocalEvent) return CANAL_ERROR_MEMORY;
+    pthread_mutex_unlock(&pdrvObj->m_mutexReceiveQueue);
+    if (NULL == pLocalEvent)
+        return CANAL_ERROR_MEMORY;
 
     vscp_copyVSCPEvent(pEvent, pLocalEvent);
     vscp_deleteVSCPevent(pLocalEvent);
@@ -265,76 +289,13 @@ VSCPBlockingReceive(long handle, vscpEvent *pEvent, unsigned long timeout)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  VSCPGetLevel
+// VSCPGetVersion
 //
 
 extern "C" unsigned long
-VSCPGetLevel(void)
+VSCPGetVersion(void)
 {
-    return CANAL_LEVEL_USES_TCPIP;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// VSCPGetDllVersion
-//
-
-extern "C" unsigned long
-VSCPGetDllVersion(void)
-{
-    return VSCP_DLL_VERSION;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// VSCPGetVendorString
-//
-
-extern "C" const char *
-VSCPGetVendorString(void)
-{
-    return VSCP_DLL_VENDOR;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// VSCPGetDriverInfo
-//
-
-extern "C" const char *
-VSCPGetDriverInfo(void)
-{
-    return VSCP_MQTT_DRIVERINFO;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//  VSCPGetVSCPGetWebPageTemplate
-//
-
-extern "C" long
-VSCPGetWebPageTemplate(long handle, const char *url, char *page)
-{
-    page = NULL;
-
-    // Not implemented
-    return -1;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//  VSCPGetVSCPWebPageInfo
-//
-
-extern "C" int
-VSCPGetWebPageInfo(long handle, const struct vscpextwebpageinfo *info)
-{
-    // Not implemented
-    return -1;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//  VSCPWebPageupdate
-//
-
-extern "C" int
-VSCPWebPageupdate(long handle, const char *url)
-{
-    // Not implemented
-    return -1;
+    unsigned long ver = MAJOR_VERSION << 24 | MINOR_VERSION << 16 |
+                        RELEASE_VERSION << 8 | BUILD_VERSION;
+    return ver;
 }

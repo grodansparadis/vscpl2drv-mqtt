@@ -38,12 +38,13 @@ VERSION_DEFS = -DMAJOR_VERSION=$(MAJOR_VERSION) -DMINOR_VERSION=$(MINOR_VERSION)
 MONGOOSE_FLAGS = -DMG_ENABLE_THREADS -DMG_ENABLE_IPV6 -DMG_ENABLE_SSL -DMG_ENABLE_GETADDRINFO
 CFLAGS = -std=c99 @CFLAGS@ ${WARNINGS} -fPIC -DCBC -I..-I../vscp/src/vscp/common  -I../vscp/src/common \
 	-I../mongoose
-CXXFLAGS = -std=c++11 ${WARNINGS} -D__LINUX__ -fPIC -D_REENTRANT @CXXFLAGS@  $(MONGOOSE_FLAGS) -I../mongoose
+CXXFLAGS = -std=c++11 ${WARNINGS} -D__LINUX__ -fPIC -D_REENTRANT @CXXFLAGS@  $(MONGOOSE_FLAGS) \
+	-I../mongoose
 CPPFLAGS = -D__LINUX__ -fPIC @CPPFLAGS@  $(MONGOOSE_FLAGS) ${WARNINGS} -fno-var-tracking-assignments -I..\
- 	-I../vscp/src/vscp/common -I../vscp/src/common -I../mongoose \
-	 -I../vscp/src/common/nlohmann \
+ 	-I../vscp/src/vscp/common -I../vscp/src/common \
+	-I../mongoose \
+	-I../vscp/src/common/nlohmann \
 	$(VERSION_DEFS)
-
 
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@

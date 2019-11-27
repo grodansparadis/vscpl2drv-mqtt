@@ -55,14 +55,8 @@
 /* Define to 1 if you have the `dl' library (-ldl). */
 #undef HAVE_LIBDL
 
-/* Define to 1 if you have the `expat' library (-lexpat). */
-#undef HAVE_LIBEXPAT
-
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
-
-/* Define to 1 if you have the `mosquitto' library (-lmosquitto). */
-#undef HAVE_LIBMOSQUITTO
 
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #undef HAVE_LIBPTHREAD
