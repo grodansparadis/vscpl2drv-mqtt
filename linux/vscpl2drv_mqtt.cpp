@@ -84,7 +84,6 @@ _fini()
 
         Cmqttobj* pif = it->second;
         if (NULL != pif) {
-            pif->m_srv.doCmdClose();
             delete pif;
             pif = NULL;
         }

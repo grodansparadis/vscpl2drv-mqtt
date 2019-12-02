@@ -222,74 +222,12 @@
     <!-- List level II VSCP drivers here -->
     <level2driver enable="true">
 
-        <!-- Level II automation -->
+        <!-- Level II MQTT -->
         <driver enable="true"
-            name = "VSCP Level II Automation Driver"
-            path-driver="/home/akhe/development/VSCP/vscpl2drv-automation/linux/vscpl2drv-automation.so"
-            path-config="/home/akhe/development/VSCP/vscpl2drv-automation/debug/conf_standard.xml"
-            guid="FF:FF:FF:FF:FF:FF:FF:FC:88:99:AA:BB:CC:DD:EE:FF" />
-
-        <!-- Level II Logger -->
-        <driver enable="false" >
-            <name>VSCP Level II Logger Driver A</name>
-            <path>/srv/vscp/drivers/level2/vscpl2drv-logger.so</path>
-             <config>/tmp/vscp_level2.log</config>
-             <guid>00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00</guid>
-        </driver>
-
-        <!-- Level II lmsensors -->
-        <driver enable="false" >
-            <name>VCCP Level II LM-sensors driver A</name>
-            <path>/srv/vscp/drivers/level2/vscpl2drv-lmsensors.so</path>
-            <config>2</config>
-            <guid>00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00</guid>
-        </driver>
-
-        <!-- Level II socketcan  -->
-        <driver enable="false" >
-            <name>VSCP Level II SocketCAN Driver A</name>
-            <path>/srv/vscp/drivers/level2/vscpl2drv-socketcan.so</path>
-            <config>vcan0</config>
-            <guid>00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00</guid>
-        </driver>
-
-        <!-- Level II mqtt -->
-        <driver enable="false" >
-            <name>VSCP Level II MQTT Driver A</name>
-            <path>/srv/vscp/drivers/level2/vscpl2drv-mqtt.so</path>
-            <config>mysession;subscribe;vscp;localhost;1883;;60</config>
-            <guid>08:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00</guid>
-        </driver>
-
-        <!-- Level II tcp/ip link -->
-        <driver enable="false" >
-            <name>VSCP Level II tcpiplink Driver  A</name>
-            <path>/srv/vscp/drivers/level2/vscpl2drv-tcpiplink.so</path>
-            <config>192.168.1.2;9598;admin;secret</config>
-            <guid>00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00</guid>
-        </driver>
-
-        <!-- Level II raw ethernet -->
-        <driver enable="false">
-            <name>VSCP Level II RawEthernet Driver A</name>
-            <config>eth0</config>
-            <path>/srv/vscp/drivers/level2/vscpl2drv-raweth.so</path>
-        </driver>
-
-       <!-- Level II simulation -->
-        <driver enable="true">
-            <name>VSCP Level II sim driver</name>  <!-- !!! Do not rename !!! will effect demos -->
-            <config>1</config>
-            <guid>FF:FF:FF:FF:FF:FF:FF:F7:03:00:00:00:00:00:00:00</guid>
-            <path>/srv/vscp/drivers/level2/vscpl2drv-sim.so</path>
-        </driver>
-
-        <!-- Level II 1-wire driver -->
-        <driver enable="false">
-            <name>VSCP Level II 1-wire Driver A</name>
-            <config>eth0</config>
-            <path>/srv/vscp/drivers/level2/vscpl2drv-wire1.so</path>
-        </driver>
+            name = "VSCP Level II MQTT Driver"
+            path-driver="/home/akhe/development/VSCP/vscpl2drv-mqtt/linux/vscpl2drv-mqtt.so.1.1.0"
+            path-config="/home/akhe/development/VSCP/vscpl2drv-mqtt/debug/conf_standard.xml"
+            guid="FF:FF:FF:FF:FF:FF:FF:FC:88:99:AA:BB:CC:DD:EE:FE" />
 
     </level2driver>
 

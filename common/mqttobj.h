@@ -36,19 +36,31 @@
 #include <syslog.h>
 #include <unistd.h>
 
-#include <mongoose.h>
-
 #include <canal.h>
 #include <canal_macro.h>
 #include <guid.h>
 #include <vscp.h>
+#include <hlo.h>
 #include <vscpremotetcpif.h>
 
 // Forward declarations
 class CWrkThread;
-class VscpRemoteTcpIf;
 class Cmqtt;
 class CWrkThreadObj;
+
+// Connection types
+#define VSCP_MQTT_TYPE_UNKNOWN 0
+#define VSCP_MQTT_TYPE_SUBSCRIBE 1
+#define VSCP_MQTT_TYPE_PUBLISH 2
+
+#define VSCP_MQTT_FORMAT_RAW 0
+#define VSCP_MQTT_FORMAT_STRING 1
+#define VSCP_MQTT_FORMAT_XML 2
+#define VSCP_MQTT_FORMAT_JSON 3
+
+#define ERROR_CODE_SUCCESS_PUBLISH 0
+#define ERROR_CODE_SUCCESS_SUBSCRIBE 1
+#define ERROR_CODE_SUCCESS_UNSUBSCRIBE 2
 
 class Cmqttobj
 {
@@ -72,11 +84,63 @@ class Cmqttobj
 
     /*!
         Add event to send queue
+
+        @param pEvent Pointer to event that should be added
+        @result True on success, false on failure
     */
-    bool addEvent2SendQueue(const vscpEvent *pEvent);
+    bool addEvent2SendQueue(const vscpEvent* pEvent);
+
+    /*!
+        Add event to receive queue
+
+        @param pEvent Pointer to event that should be added
+        @result True on success, false on failure
+    */
+    bool addEvent2ReceiveQueue(const vscpEvent* pEvent);
+
+    /*!
+        Load configuration
+
+        @return true on success, false on failure
+    */
+    bool doLoadConfig(void);
+
+    /*!
+        Save configuration
+
+        @return true on success, false on failure
+    */
+    bool doSaveConfig(void);
+
+    /*!
+        Parse HLO
+
+        @param size Size of HLO object 0-511 bytes
+        @param buf Pointer to buf containing HLO
+        @param phlo Pointer to HLO that will get parsed data
+        @return true on successfull parsing, false otherwise
+    */
+    bool
+    parseHLO(uint16_t size, uint8_t* inbuf, CHLO* phlo);
+
+    /*!
+        Handle HLO commands sent to this driver
+
+        @param pEvent HLO event
+        @return true on success, false on failure
+    */
+    bool handleHLO(vscpEvent* pEvent);
+
+    /*!
+        Put event on receive queue and signal
+        that a new event is available
+
+        @param ex Event to send
+        @return true on success, false on failure
+    */
+    bool eventExToReceiveQueue(vscpEventEx &ex);
 
   public:
-
     /// Run flag
     bool m_bQuit;
 
@@ -89,44 +153,59 @@ class Cmqttobj
     /// True if config can be written on comand
     bool m_bWrite;
 
+    // Config file path
+    std::string m_path;
+
+    /// Unique GUID for this driver
+    cguid m_guid;
+
+    /// Event index for simple channel handling
+    uint8_t m_index;
+
+    /// zone for simple channel handling
+    uint8_t m_zone;
+
+    /// Subzone for simple channel handling
+    uint8_t m_subzone;
+
     /// Connected flag
     bool m_bConnected;
 
-    /// True if we should subscribe. False if we should publish)
-    bool m_bSubscribe;
+    /// mqtt publish format
+    uint8_t m_format;
 
     /// Session id
     std::string m_sessionid;
 
-    /// Server supplied username
-    std::string m_username;
-
-    /// Server supplied password
-    std::string m_password;
-
     /// server supplied prefix
     std::string m_prefix;
-
-    /// server supplied host
-    std::string m_host;
 
     /// Subscribe or Publish topic.
     std::string m_topic;
 
+    /// Connection type (subscrive/publish/unknown)
+    uint8_t m_type;
+
     // MQTT host (broker)
-    std::string m_hostMQTT;
+    std::string m_host;
+
+    // MQTT port  tcp=1883, TSL over tcp = 8883
+    int m_port;
 
     // MQTT username (broker)
-    std::string m_usernameMQTT;
+    std::string m_username;
 
     // MQTT password (broker)
-    std::string m_passwordMQTT;
+    std::string m_password;
 
-    /*!
-        Structure for subscription topics. Will only hold
-        one entry for this driver.
-    */
-    struct mg_mqtt_topic_expression m_topic_list[1];
+    // Keepalive value
+    int m_keepalive;
+
+    /// True if subscribe / False if publish
+    bool m_bSubscribe;
+
+    // Quality Of Service
+    uint8_t m_qos;
 
     /*!
         Event simplification
@@ -160,29 +239,18 @@ class Cmqttobj
     /// Subzone for simple channel handling
     uint8_t m_simple_subzone;
 
-    /*!
-        Keepalive value
-    */
-    int m_keepalive;
-
     /// Receive Filter
     vscpEventFilter m_vscpfilterRx;
 
     /// Transmit Filter
     vscpEventFilter m_vscpfilterTx;
 
-    // Thread worker object
-    CWrkThreadObj *m_pWrkObj;
-
     /// Pointer to worker thread
-    pthread_t *m_threadWork;
-
-    /// VSCP server interface
-    VscpRemoteTcpIf m_srv;
+    pthread_t* m_threadWork;
 
     // Queue
-    std::list<vscpEvent *> m_sendList;
-    std::list<vscpEvent *> m_receiveList;
+    std::list<vscpEvent*> m_sendList;
+    std::list<vscpEvent*> m_receiveList;
 
     /*!
         Event object to indicate that there is an event in the output queue
@@ -193,26 +261,6 @@ class Cmqttobj
     // Mutex to protect the output queue
     pthread_mutex_t m_mutexSendQueue;
     pthread_mutex_t m_mutexReceiveQueue;
-};
-
-///////////////////////////////////////////////////////////////////////////////
-//                          Worker Tread Object
-///////////////////////////////////////////////////////////////////////////////
-
-class CWrkThreadObj
-{
-public:
-    /// Constructor
-    CWrkThreadObj();
-
-    /// Destructor
-    ~CWrkThreadObj();
-
-    /// VSCP server interface
-    VscpRemoteTcpIf m_srv;
-
-    /// Sensor object
-    Cmqttobj *m_pObj;
 };
 
 #endif // defined _VSCPMQTT_H__INCLUDED_

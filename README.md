@@ -8,20 +8,212 @@
 
 MQTT provides a lightweight method of carrying out messaging using a publish/subscribe model. This makes it suitable for "machine to machine" messaging such as with low power sensors or mobile devices such as phones, embedded computers or micro controllers like the Arduino. A good example of this is all of the work that Andy Stanford-Clark IBM (one of the originators of MQTT) has done in home monitoring and automation with his twittering house and twittering ferry. The MQTT protocol is now an ISO standard maintained by OASIS.
 
-This driver allow publishing of VSCP events as well as subscribing to VSCP events.
+This driver allow publishing of VSCP events as well as subscribing to VSCP events over mqtt. VSCP provide a lot for IoT functionality than mqtt with it's trasport work and they work very well together.
 To build and use the driver you need yo install the Mosquitto library. You can find instruction on how to do that [here](https://grodansparadis.gitbooks.io/the-vscp-daemon/installing_moquitto_for_use_with_vscp.md).
 
-## Configuration String
-The configuration string have the following format
+## Configuration
+
+### Linux
+
+#### VSCP daemon driver config
+
+The VSCP daemon configuration is (normally) located at */etc/vscp/vscpd.conf*. To use the vscpl2drv-mqtt.so driver there must be an entry in the
 
 ```
-“sessionid";"subscribe”|”publish”;channel;host;user;password;keepalive;filter;mask
+> <level2driver enable="true">
 ```
 
-The first configuration parameter is a unique id like "mysession22" for your connection. The second parameter tell if the intention is to subscribe (“subscribe”) to an existing MQTT channel or to publish (“publish”) events on a channel. The second parameter is the topic. This is a text string identifying the topic. It is recommended that this string starts with “vscp/”. Host is the host where the MQTT broker is located (defaults to "localhost:1883"). Note that port must be included in the hostname. User/password is credentials for the channel if they are needed.
+section on the following format
+
+```xml
+<!-- Level II automation -->
+<driver enable="true"
+    name="link"
+    path-driver="/usr/lib/vscpl2drv-mqtt.so"
+    path-config="/var/lib/vscpl2drv-mqtt/drv.conf"
+    guid="FF:FF:FF:FF:FF:FF:FF:FC:88:99:AA:BB:CC:DD:EE:FF"
+</driver>
+```
+
+##### enable
+Set enable to "true" if the driver should be loaded.
+
+##### name
+This is the name of the driver. Used when referring to it in different interfaces.
+
+##### path
+This is the path to the driver. If you install from a Debian package this will be */usr/bin/vscpl2drv-mqtt.so* and if you build and install the driver yourself it will be */usr/local/bin/vscpl2drv-mqtt.so* or a custom location if you configured that.
+
+##### guid
+All level II drivers must have a unique GUID. There is many ways to obtain this GUID, Read more [here](https://grodansparadis.gitbooks.io/the-vscp-specification/vscp_globally_unique_identifiers.html).
+
+#### vscpl2drv-mqtt driver config
+
+```xml
+<config debug="true|false"
+            access="rw"
+            keepalive="true|false"
+            sub-filter="incoming-filter"
+            sub-mask="incoming-mask"
+            pub-filter="incoming-filter"
+            pub-mask="incoming-mask"
+            index="index identifying this driver"
+            zone="zone identifying this driver"
+            subzone="subzone identifying this driver"
+            sessionid=""
+            type="subscribe|publish"
+            topic="mqtt path"
+            prefix="mqtt part prefix"
+            remote-host=""
+            remote-port=""
+            remote-user=""
+            remote-password=""
+
+        <simple enable="true|false"
+                    vscpclass=""
+                    vscptype=""
+                    coding=""
+                    unit=""
+                    sensoridenx=""
+                    index=""
+                    zone=""
+                    subzone="" />
+    </config>
+```
+
+#### debug
+Set to 'true' to get debug information written to syslog. Default is 'false' and no debug information written.
+
+#### access
+Access tells what the driver can do with it's own configuration file. 
+
+A 'r' in the access string makes it possible to load a configurations file when the driver is live with the HLO 'load' command. 
+
+A 'w' in the access string makes it possible to write a configurations file when the driver is live with the HLO 'save' command.
+
+So an access string "rw" will allow both load and save of a configuration file. While "r" only allow read and "w" only allow write.
+
+#### keepalive
+If _keepalive_ is set to zero a lost connection to the remote MQTT broker will disconnect forever. If _keepalive_ is set to a value this value is the time in seconds the driver will wait until it tries to reconnect to the remote mqtt broker.
+
+#### sub-filter
+Event filter that together with the _rx-mask_ control which events should be received from the remote mqtt broker. 
+
+Can be used to limit the events that is recived on a subscribe channel.
+
+#### sub-mask
+Event mask that together with the _rx-filter_ control which events should be received from the remote mqtt broker. 
+
+Can be used to limit the events that is recived on a subscribe channel.
+
+#### pub-filter
+Event filter that together with the _tx-mask_ control which events should be sent to the remote mqtt broker. 
+
+Can be used to limit the events that is transmitted on a publishing channel.
+
+#### pub-mask
+Event mask that together with the _tx-filter_ control which events should be sent to the remote mqtt broker. 
+
+Can be used to limit the events that is transmitted on a publishing channel.
+
+#### index
+This is the index used for events originating from the driver itself. A typical example is the CLASS1.INFORMATION, Type=6, Node Heartbeat the driver send every minute.
+
+#### zone
+This is the zone used for events originating from the driver itself. A typical example is the CLASS1.INFORMATION, Type=6, Node Heartbeat the driver send every minute.
+
+#### subzone
+This is the subzone used for events originating from the driver itself. A typical example is the CLASS1.INFORMATION, Type=6, Node Heartbeat the driver send every minute.
+
+#### sessionid
+This is a string that identify this client session. The first configuration parameter is a unique id like "mysession22" for your connection. 
+
+#### type
+This value should either be 'subscribe', which also is default, or 'publish'. A _subscribe_ connection get events from a remote mqtt  broker. A _publish_ connection send events to a remote mqtt broker. 
+
+#### topic
+This is the topic string used for subscribing pr publishing. 
+
+The default subscribing topic is 
+
+> /vscp/*
+
+This will receive all events that uis posten to topic _/vscp_ and all subtopics for this level. That is events published on _/vscp/guid/class_ and _/vscp/guid/class/type_ will be received.
+
+The default publishing topic (if topic is empty) is 
+
+> /vscp/guid/class/type
+
+where guid/class/type will be set to the guid, class and type of the published event.
+
+If set that topic will be used. That is no guid's, class, type will be added to the topic string on send.
+
+
+#### prefix
+Prefix is a string used in front of any configured _topic_. This prefix is also prepended to an empty topic string.
+
+#### remote-host
+This the address for the remote mqtt broker.
+
+#### remote-port
+This is the port used for connections on the remote mqtt broker. Default is 1883 for a non-tls connection and 8883 for a tls connection.
+
+#### remote-user
+This is the username needed to connect to the remote mqtt broker. If left empty no username/passord will be used.
+
+#### remote-password
+This is the password needed to connect to the remote mqtt broker.
+
+### simple
+The _simple_ tag is used to configure parameters for the simple connection mode of the driver which can be used for VSCP measurement events. All other event types will be ignored when enabled. 
+
+In the simple mode pure measurement values are sent instead of evnets for both subscribe and publish modes.
+
+#### enable
+Simple mode will be used if set to 'true'- Simple mode will not be used if set to 'false'.
+
+#### vscpclass
+This is the VSCP class that should be used to generate the measurement value from. It can be any of the measurement classes.
+
+#### vscpclass
+This is the VSCP tyoe of the VSCO class that should be used to generate the measurement value from. It can be any of the types from a measurement classes.
+
+#### coding
+Not used at the moment
+
+#### unit
+This is the _unit_ the measurement event should have. If it has another unit it will be thrown away. Default is zero.
+
+#### sensorindex
+This is the _sensorindex_ the measurement event should have. If it has another sensorindex it will be thrown away. Default is zero.
+
+#### index
+This is the _index_ the measurement event should have. If it has another index it will be thrown away. For a measurement class that does not use an index it is not used. Default is zero.
+
+#### zone
+This is the _zone_ the measurement event should have. If it has another zone it will be thrown away. For a measurement class that does not use an zone it is not used. Default is zero.
+
+#### subzone
+This is the _subzone_ the measurement event should have. If it has another subzone it will be thrown away. For a measurement class that does not use an subzone it is not used. Default is zero.
+
+### Windows
+t.b.d.
 
 ## Install the driver on Linux
-tbd
+You can install the driver using the debian package with
+
+> sudo dpkg -i vscpl2drv-mqtt
+
+the driver will be installed to /usr/lib
+
+After installing the driver you need to add it to the vscpd.conf file (/etc/vscp/vscpd.conf). Se the *configuration* section above.
+
+You also need to set up a configuration file for the driver. If you don't need to dynamically edit the content of this file a good and safe location for it is in the */etc/vscp/* folder alongside the VSCP daemon configuration file.
+
+If you need to do dynamic configuration we recommend that you create the file in the */var/vscp/vscpl2drv-automation*
+
+A sample configuration file is make available in */usr/share/vscpl2drv-automation* during installation.
+
 
 ## Install the driver on Windows
 tbd

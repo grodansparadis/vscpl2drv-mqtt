@@ -42,293 +42,24 @@
 #include <sys/uio.h>
 #include <time.h>
 
-#include <mongoose.h>
+#include <expat.h>
 #include <mosquitto.h>
 
+#include <vscp.h>
+#include <hlo.h>
 #include <vscp_class.h>
 #include <vscp_type.h>
 #include <vscphelper.h>
 #include <vscpremotetcpif.h>
+#include <remotevariablecodes.h>
 
 #include "mqttobj.h"
 
 // Forward declarations
 void*
-workerTread(void* pData);
+workerThread(void* pData);
 
-////////////////////////////////////////////////////////////////////////////////
-// ev_handler
-//
-
-static void
-ev_handler(struct mg_connection* nc, int ev, void* p)
-{
-    char username[80];
-    char password[80];
-    struct mg_mqtt_message* msg = (struct mg_mqtt_message*)p;
-    Cmqttobj* pmqttobj = (Cmqttobj*)nc->mgr->user_data;
-
-    switch (ev) {
-
-        case MG_EV_CONNECT: {
-            struct mg_send_mqtt_handshake_opts opts;
-
-            opts.flags = MG_MQTT_CLEAN_SESSION;
-            opts.keep_alive = pmqttobj->m_keepalive;
-
-            // Username
-            opts.user_name = NULL;
-            if (pmqttobj->m_username.length()) {
-                strncpy(
-                  username,
-                  pmqttobj->m_username.c_str(),
-                  std::min(sizeof(username), pmqttobj->m_username.length()));
-                opts.user_name = username;
-                opts.flags |= MG_MQTT_HAS_USER_NAME;
-            }
-
-            // Password
-            opts.password = NULL;
-            if (pmqttobj->m_password.length()) {
-                strncpy(
-                  password,
-                  pmqttobj->m_password.c_str(),
-                  std::min(sizeof(password), pmqttobj->m_password.length()));
-                opts.password = password;
-                opts.flags |= MG_MQTT_HAS_PASSWORD;
-            }
-
-            mg_set_protocol_mqtt(nc);
-
-            if (pmqttobj->m_bSubscribe) {
-                opts.password = NULL;
-                opts.user_name = NULL;
-            } else {
-                opts.flags = MG_MQTT_CLEAN_SESSION;
-                opts.keep_alive = 60;
-                opts.password = NULL;
-                opts.user_name = NULL;
-
-                mg_send_mqtt_handshake_opt(
-                  nc, pmqttobj->m_sessionid.c_str(), opts);
-
-                // mg_send_mqtt_handshake( nc, pmqttobj->m_sessionid.c_str()
-                // );
-            }
-
-            syslog(LOG_INFO, "VSCP MQTT Driver - Connection opened.\n");
-
-        } break;
-
-        case MG_EV_MQTT_CONNACK:
-            if (msg->connack_ret_code != MG_EV_MQTT_CONNACK_ACCEPTED) {
-                syslog(LOG_ERR,
-                       "VSCP MQTT Driver - Got MQTT connection error: %d\n",
-                       msg->connack_ret_code);
-                pmqttobj->m_bQuit = true;
-                return;
-            }
-
-            pmqttobj->m_bConnected = true;
-
-            if (pmqttobj->m_bSubscribe) {
-                mg_mqtt_subscribe(nc, pmqttobj->m_topic_list, 1, 42);
-            }
-            break;
-
-        case MG_EV_MQTT_PUBACK:
-            break;
-
-        case MG_EV_MQTT_SUBACK:
-            break;
-
-        case MG_EV_MQTT_PINGREQ:
-            mg_mqtt_pong(nc);
-            break;
-
-        // Incoming message
-        case MG_EV_MQTT_PUBLISH: {
-            vscpEventEx eventEx;
-
-            eventEx.obid = 0;
-            eventEx.timestamp = vscp_makeTimeStamp();
-            vscp_setEventExDateTimeBlockToNow(&eventEx);
-            eventEx.head = VSCP_PRIORITY_NORMAL;
-            memset(eventEx.GUID, 0, 16);
-
-            if (!strncmp(msg->topic.p,
-                         (const char*)pmqttobj->m_topic.c_str(),
-                         msg->topic.len)) {
-
-                char valbuf[512];
-                memset(valbuf, 0, sizeof(valbuf));
-                memcpy(valbuf, msg->payload.p, MIN(511, msg->payload.len));
-                std::string str = std::string(valbuf);
-
-                if (pmqttobj->m_bSimplify) {
-
-                    // Here the data will only be a value (Simple)
-
-                    eventEx.vscp_class = pmqttobj->m_simple_vscpclass;
-                    eventEx.vscp_type = pmqttobj->m_simple_vscptype;
-
-                    switch (pmqttobj->m_simple_vscpclass) {
-
-                        case VSCP_CLASS2_MEASUREMENT_STR:
-
-                            // Sensor index
-                            eventEx.data[0] = pmqttobj->m_simple_sensorindex;
-
-                            // Zone
-                            eventEx.data[1] = pmqttobj->m_simple_zone;
-
-                            // Subzone
-                            eventEx.data[2] = pmqttobj->m_simple_subzone;
-
-                            // Unit
-                            eventEx.data[3] = pmqttobj->m_simple_unit;
-
-                            // Value can have max 7 characters
-                            if (str.length() > (VSCP_LEVEL2_MAXDATA - 4)) {
-                                str =
-                                  vscp_str_right(str, VSCP_LEVEL2_MAXDATA - 4);
-                            }
-
-                            // Set size
-                            eventEx.sizeData = str.length() + 4;
-
-                            // Copy in string data
-                            memcpy(eventEx.data + 4, str.c_str(), str.length());
-
-                            break;
-
-                        case VSCP_CLASS2_MEASUREMENT_FLOAT: {
-                            // Sensor index
-                            eventEx.data[0] = pmqttobj->m_simple_sensorindex;
-
-                            // Zone
-                            eventEx.data[1] = pmqttobj->m_simple_zone;
-
-                            // Subzone
-                            eventEx.data[2] = pmqttobj->m_simple_subzone;
-
-                            // Unit
-                            eventEx.data[3] = pmqttobj->m_simple_unit;
-
-                            double val;
-                            val = std::stod(str);
-                            uint8_t* p = (uint8_t*)&val;
-
-                            if (vscp_isLittleEndian()) {
-
-                                for (int i = 7; i > 0; i--) {
-                                    eventEx.data[4 + 7 - i] = *(p + i);
-                                }
-
-                            } else {
-                                memcpy(eventEx.data + 4, p, 8);
-                            }
-
-                            // Set data size
-                            eventEx.sizeData = 8 + 4;
-
-                        } break;
-
-                        default:
-                        case VSCP_CLASS1_MEASUREMENT:
-
-                            if (VSCP_DATACODING_STRING ==
-                                pmqttobj->m_simple_coding) {
-
-                                // * * * Present as string  * * *
-
-                                // Coding
-                                eventEx.data[0] =
-                                  VSCP_DATACODING_STRING |
-                                  ((pmqttobj->m_simple_unit << 3) &
-                                   VSCP_MASK_DATACODING_UNIT) |
-                                  (pmqttobj->m_simple_sensorindex &
-                                   VSCP_MASK_DATACODING_INDEX);
-
-                                // Set string data
-
-                                // Value can have max 7 characters
-                                if (str.length() > 7) {
-                                    str = vscp_str_right(str, 7);
-                                }
-
-                                memcpy(
-                                  eventEx.data + 1, str.c_str(), str.length());
-
-                                // Set size
-                                eventEx.sizeData = str.length() + 1;
-
-                            } else {
-
-                                // * * * Present as single precision floating
-                                // point number * * *
-                                float val = atof(str.c_str());
-
-                                val = VSCP_UINT32_SWAP_ON_LE(val);
-                                memcpy(eventEx.data + 1, (uint8_t*)&val, 4);
-
-                                eventEx.data[0] =
-                                  VSCP_DATACODING_SINGLE |
-                                  ((pmqttobj->m_simple_unit << 3) &
-                                   VSCP_MASK_DATACODING_UNIT) |
-                                  (pmqttobj->m_simple_sensorindex &
-                                   VSCP_MASK_DATACODING_INDEX);
-
-                                // Set size
-                                eventEx.sizeData = 5; // coding + 32-bit value
-                            }
-                            break;
-                    }
-
-                    goto FEED_EVENT;
-
-                } else {
-
-                    if (vscp_setVscpEventExFromString(&eventEx, str)) {
-
-                    FEED_EVENT:
-
-                        vscpEvent* pEvent = new vscpEvent;
-                        if (NULL != pEvent) {
-
-                            pEvent->sizeData = 0;
-                            pEvent->pdata = NULL;
-
-                            if (vscp_doLevel2FilterEx(
-                                  &eventEx, &pmqttobj->m_vscpfilterRx)) {
-
-                                if (vscp_convertVSCPfromEx(pEvent, &eventEx)) {
-                                    pthread_mutex_lock(
-                                      &pmqttobj->m_mutexReceiveQueue);
-                                    pmqttobj->m_receiveList.push_back(pEvent);
-                                    sem_post(&pmqttobj->m_semReceiveQueue);
-                                    pthread_mutex_unlock(
-                                      &pmqttobj->m_mutexReceiveQueue);
-                                }
-
-                            } else {
-                                vscp_deleteVSCPevent(pEvent);
-                            }
-                        }
-                    }
-                }
-            }
-        } break;
-
-        case MG_EV_CLOSE:
-
-#ifndef WIN32
-            syslog(LOG_INFO, "VSCP MQTT Driver - Connection closed.\n");
-#endif
-            pmqttobj->m_bConnected = false;
-            pmqttobj->m_bQuit = true;
-    }
-}
+#define XML_BUFF_SIZE 30000
 
 //////////////////////////////////////////////////////////////////////
 // Cmqttobj
@@ -340,12 +71,24 @@ Cmqttobj::Cmqttobj()
     m_bWrite = false;
     m_bQuit = false;
     m_bConnected = false;
-    m_bSubscribe = true;
+    m_type = VSCP_MQTT_TYPE_UNKNOWN;
+    m_format = VSCP_MQTT_FORMAT_STRING;
 
-    m_sessionid = "default";
+    // Params identifing this node
+    m_index = 0;
+    m_zone = 0;
+    m_subzone = 0;
+
+    m_sessionid = "";
+    m_keepalive =
+      0; // 0 = Don't keep alive, n = seconds to wait before reconnect
+    m_qos = 0;
 
     // Simple
     m_bSimplify = false;
+    m_host = "127.0.0.1";
+    m_port = 1883;
+
     m_simple_vscpclass = VSCP_CLASS1_MEASUREMENT;
     m_simple_vscptype = 0;
     m_simple_coding = 0;
@@ -355,10 +98,11 @@ Cmqttobj::Cmqttobj()
     m_simple_zone = 0;
     m_simple_subzone = 0;
 
-    m_topic_list[0].qos = 0;
-    m_topic_list[0].topic = NULL,
+    // Initialize the mqtt library
+    mosquitto_lib_init();
 
-    vscp_clearVSCPFilter(&m_vscpfilterRx); // Accept all events
+    vscp_clearVSCPFilter(&m_vscpfilterRx); // Accept all RX events
+    vscp_clearVSCPFilter(&m_vscpfilterTx); // Accept all TX events
 
     sem_init(&m_semSendQueue, 0, 0);
     sem_init(&m_semReceiveQueue, 0, 0);
@@ -380,6 +124,8 @@ Cmqttobj::~Cmqttobj()
 
     sem_destroy(&m_semSendQueue);
     sem_destroy(&m_semReceiveQueue);
+
+    mosquitto_lib_cleanup();
 }
 
 // ----------------------------------------------------------------------------
@@ -389,22 +135,24 @@ Cmqttobj::~Cmqttobj()
     =========
 
     <?xml version = "1.0" encoding = "UTF-8" ?>
-    <!-- Version 0.0.1    2019-11-05   -->
+    <!-- Version 0.0.1    2019-11-29   -->
     <config debug="true|false"
-            write="true|false"
-            guid="FF:FF:FF:FF:FF:FF:FF:FC:88:99:AA:BB:CC:DD:EE:FF"
+            access="rw"
+            keepalive="true|false"
             filter="incoming-filter"
             mask="incoming-mask"
+            index="index identifying this driver"
+            zone="zone identifying this driver"
+            subzone="subzone identifying this driver"
             sessionid=""
             type="subscribe|publish"
             topic="mqtt path"
             prefix="mqtt part prefix"
             remote-host=""
-            remotye-port=""
+            remote-port=""
             remote-user=""
             remote-password=""
-            keepalive="true|false"
-            simple="true|false" >
+
         <simple enable="true|false"
                     vscpclass=""
                     vscptype=""
@@ -415,9 +163,12 @@ Cmqttobj::~Cmqttobj()
                     zone=""
                     subzone="" />
     </config>
-    "topic" is optional. Publish default to "/vscp/class/type/guid", subscribe
-   defaults to "/vscp/ *". If given events are published as they are on topic.
-   "prefix" can be set to add a path before the default topic or a set topic.
+    "topic" is optional.
+    Publish default to "/vscp/class/type/guid",
+    subscribe defaults to "/vscp/ *".
+    If given events are published as they are on topic.
+    "prefix" can be set to add a path before the default
+    topic or a set topic.
 
 */
 
@@ -462,12 +213,39 @@ startSetupParser(void* data, const char* name, const char** attr)
                         pObj->m_bRead = false;
                     }
                 }
+            } else if (0 == strcasecmp(attr[i], "keepalive")) {
+                if (!attribute.empty()) {
+                    pObj->m_keepalive = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "qos")) {
+                if (!attribute.empty()) {
+                    pObj->m_qos = vscp_readStringValue(attribute);
+                    if (pObj->m_qos > 2) {
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt]  Invalid QoS value [%d] - "
+                               "Set to zero.",
+                               pObj->m_qos);
+                        pObj->m_qos = 0;
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "index")) {
+                if (!attribute.empty()) {
+                    pObj->m_index = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "zone")) {
+                if (!attribute.empty()) {
+                    pObj->m_zone = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "subzone")) {
+                if (!attribute.empty()) {
+                    pObj->m_subzone = vscp_readStringValue(attribute);
+                }
             } else if (0 == strcasecmp(attr[i], "rxfilter")) {
                 if (!attribute.empty()) {
                     if (!vscp_readFilterFromString(&pObj->m_vscpfilterRx,
                                                    attribute)) {
                         syslog(LOG_ERR,
-                               "[vscpl2drv-automation] Unable to read event "
+                               "[vscpl2drv-mqtt]  Unable to read event "
                                "receive filter.");
                     }
                 }
@@ -476,7 +254,7 @@ startSetupParser(void* data, const char* name, const char** attr)
                     if (!vscp_readMaskFromString(&pObj->m_vscpfilterRx,
                                                  attribute)) {
                         syslog(LOG_ERR,
-                               "[vscpl2drv-automation] Unable to read event "
+                               "[vscpl2drv-mqtt]  Unable to read event "
                                "receive mask.");
                     }
                 }
@@ -485,7 +263,7 @@ startSetupParser(void* data, const char* name, const char** attr)
                     if (!vscp_readFilterFromString(&pObj->m_vscpfilterTx,
                                                    attribute)) {
                         syslog(LOG_ERR,
-                               "[vscpl2drv-automation] Unable to read event "
+                               "[vscpl2drv-mqtt]  Unable to read event "
                                "transmit filter.");
                     }
                 }
@@ -494,8 +272,68 @@ startSetupParser(void* data, const char* name, const char** attr)
                     if (!vscp_readMaskFromString(&pObj->m_vscpfilterTx,
                                                  attribute)) {
                         syslog(LOG_ERR,
-                               "[vscpl2drv-automation] Unable to read event "
+                               "[vscpl2drv-mqtt]  Unable to read event "
                                "transmit mask.");
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "sessionid")) {
+                if (!attribute.empty()) {
+                    pObj->m_sessionid = attribute;
+                }
+            } else if (0 == strcasecmp(attr[i], "type")) {
+                if (!attribute.empty()) {
+                    vscp_makeUpper(attribute);
+                    if (std::string::npos != attribute.find("SUBSCRIBE")) {
+                        pObj->m_type = VSCP_MQTT_TYPE_SUBSCRIBE;
+                    } else if (std::string::npos != attribute.find("PUBLISH")) {
+                        pObj->m_type = VSCP_MQTT_TYPE_PUBLISH;
+                    } else {
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt]  Type should be 'subscribe' "
+                               "or 'publish' now =%s. Set to 'subscribe'",
+                               attribute.c_str());
+                        pObj->m_type = VSCP_MQTT_TYPE_SUBSCRIBE;
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "topic")) {
+                if (!attribute.empty()) {
+                    pObj->m_topic = attribute;
+                }
+            } else if (0 == strcasecmp(attr[i], "prefix")) {
+                if (!attribute.empty()) {
+                    pObj->m_prefix = attribute;
+                }
+            } else if (0 == strcasecmp(attr[i], "remote-host")) {
+                if (!attribute.empty()) {
+                    pObj->m_host = attribute;
+                }
+            } else if (0 == strcasecmp(attr[i], "remote_port")) {
+                if (!attribute.empty()) {
+                    pObj->m_port = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "remote-user")) {
+                if (!attribute.empty()) {
+                    pObj->m_username = attribute;
+                }
+            } else if (0 == strcasecmp(attr[i], "remote-password")) {
+                if (!attribute.empty()) {
+                    pObj->m_password = attribute;
+                }
+            }
+        }
+    } else if ((0 == strcmp(name, "simple")) && (1 == depth_setup_parser)) {
+        for (int i = 0; attr[i]; i += 2) {
+
+            std::string attribute = attr[i + 1];
+            vscp_trim(attribute);
+
+            if (0 == strcasecmp(attr[i], "debug")) {
+                if (!attribute.empty()) {
+                    vscp_makeUpper(attribute);
+                    if (std::string::npos != attribute.find("TRUE")) {
+                        pObj->m_bDebug = true;
+                    } else {
+                        pObj->m_bDebug = false;
                     }
                 }
             }
@@ -520,366 +358,50 @@ endSetupParser(void* data, const char* name)
 bool
 Cmqttobj::open(std::string& pathcfg, cguid& guid)
 {
-    // Parse the configuration string. It should
-    // have the following form
-    // "sessionid";“subscribe”|”publish”;channel;host:port;user;password;keepalive;filter;mask
-    //
-    // std::deque<std::string> tokens;
-    // vscp_split(tokens, pConfig, ";");
+    // Set GUID
+    m_guid = guid;
 
-    // // Session id
-    // if (!tokens.empty()) {
-    //     m_sessionid = tokens.front();
-    //     tokens.pop_front();
-    // }
+    // Save config path
+    m_path = pathcfg;
 
-    // // Check if we should publish or subscribe
-    // if (!tokens.empty()) {
-    //     // Check for *subscribe*/publish
-    //     str = tokens.front();
-    //     tokens.pop_front();
-    //     vscp_trim(str);
-    //     if (0 == vscp_strcasecmp(str.c_str(), "PUBLISH")) {
-    //         m_bSubscribe = false;
-    //     }
-    // }
-
-    // // Get topic from configuration string
-    // if (!tokens.empty()) {
-    //     m_topic = tokens.front();
-    //     tokens.pop_front();
-    // }
-
-    // // Get MQTT host from configuration string
-    // if (!tokens.empty()) {
-    //     m_hostMQTT = tokens.front();
-    //     tokens.pop_front();
-    // }
-
-    // // Get MQTT user from configuration string
-    // if (!tokens.empty()) {
-    //     m_usernameMQTT = tokens.front();
-    //     tokens.pop_front();
-    // }
-
-    // // Get MQTT password from configuration string
-    // if (!tokens.empty()) {
-    //     m_passwordMQTT = tokens.front();
-    //     tokens.pop_front();
-    // }
-
-    // // Get MQTT keep alive from configuration string
-    // if (!tokens.empty()) {
-    //     m_keepalive = vscp_readStringValue(tokens.front());
-    //     tokens.pop_front();
-    // }
-
-    // // First log on to the host and get configuration
-    // // variables
-
-    // if (VSCP_ERROR_SUCCESS != m_srv.doCmdOpen(m_host, m_username,
-    // m_password)) {
-    //     syslog(LOG_ERR,
-    //            "Unable to connect to VSCP TCP/IP interface. Terminating!");
-    //     return false;
-    // }
-
-    // // Find the channel id
-    // uint32_t ChannelID;
-    // m_srv.doCmdGetChannelID(&ChannelID);
-
-    // The server should hold configuration data for each sensor
-    // we want to monitor.
-    //
-    // We look for
-    //
-    //   _sessionid - Unique id for MQTT session, e.g. "session2"
-    //
-    //   _type   - “subscribe” to subscribe to a MQTT topic. ”publish” to
-    //              publish events to a MQTT topic. Defaults to “subscribe”.
-    //
-    //   _topic - This is a text string identifying the topic. It is
-    //              recommended that this string starts with “vscp/”.
-    //              Defaults to “vscp”
-    //
-    //   _qos   - MQTT QOS value. Defaults to 0.
-    //
-    //   _host  - IP address + port or a DNS resolvable address + port on the
-    //              form host:port to the remote host.
-    //              Mandatory and must be declared either in the configuration
-    //              string or in this variable. Defaults to “localhost:1883”
-    //
-    //   _user - Username used to log in on the remote sever.
-    //              Defaults to empty.
-    //
-    //   _password - Password used to login on the remote server.
-    //              Defaults to empty.
-    //
-    //   _keepalive - Keepalive value for channel. Defaults to 60.
-    //
-    //   _filter - Standard VSCP filter in string form.
-    //                 1,0x0000,0x0006,
-    //                 ff:ff:ff:ff:ff:ff:ff:01:00:00:00:00:00:00:00:00
-    //              as priority,class,type,GUID
-    //              Used to filter what events that is received from
-    //              the mqtt interface. If not give all events
-    //              are received.
-    //   _mask - Standard VSCP mask in string form.
-    //                 1,0x0000,0x0006,
-    //                 ff:ff:ff:ff:ff:ff:ff:01:00:00:00:00:00:00:00:00
-    //              as priority,class,type,GUID
-    //              Used to filter what events that is received from
-    //              the mqtt interface. If not give all events
-    //              are received.
-    //
-    //   _simple - If available simlicty will be enabled which makes it
-    //              possible to send just numbers over MQTT but still get
-    //              valid events into the system. The functionality works the
-    //              other way around to so measurement events can sen data
-    //              over MQTT as just a number possibly using the topic as
-    //              a way to tell what is sent.
-
-    // strName = m_prefix + std::string("_sessionid");
-    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-    //     m_sessionid = str;
-    // }
-
-    // strName = m_prefix + std::string("_type");
-    // m_srv.getRemoteVariableValue(strName, str);
-
-    // // Check for subscribe/publish
-    // vscp_trim(str);
-    // if (0 == vscp_strcasecmp(str.c_str(), "publish")) {
-    //     m_bSubscribe = false;
-    // }
-
-    // strTopic = m_prefix + std::string("_topic");
-    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-    //     m_topic = str;
-    // }
-
-    // strName = m_prefix + std::string("_host");
-    // if (VSCP_ERROR_SUCCESS ==
-    //     m_srv.getRemoteVariableValue(strName, m_hostMQTT)) {
-    //     m_hostMQTT = str;
-    // }
-
-    // strName = m_prefix + std::string("_username");
-    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-    //     m_usernameMQTT = str;
-    // }
-
-    // strName = m_prefix + std::string("_password");
-    // if (VSCP_ERROR_SUCCESS ==
-    //     m_srv.getRemoteVariableValue(strName, m_passwordMQTT)) {
-    //     m_passwordMQTT = str;
-    // }
-
-    // strName = m_prefix + std::string("_keepalive");
-    // int* pint = new int;
-    // assert(NULL != pint);
-    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableInt(strName, pint)) {
-    //     m_keepalive = *pint;
-    // }
-
-    // strName = m_prefix + std::string("_qos");
-    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableInt(strName, pint)) {
-    //     m_topic_list[0].qos = *pint;
-    // }
-
-    // delete pint;
-
-    // strName = m_prefix + std::string("_filter");
-    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-    //     vscp_readFilterFromString(&m_vscpfilter, str);
-    // }
-
-    // strName = m_prefix + std::string("_mask");
-    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-    //     vscp_readMaskFromString(&m_vscpfilter, str);
-    // }
-
-    // Type = 0
-    // ====================================================================
-    // Send CLASS1.MEASUREMENT  float or string
-    // Coding: 10,float|string,vscp-type,sensorindex(0-7),unit(0-7)
-    //
-    // Type = 1
-    // ====================================================================
-    // Send CLASS2.MEASUREMENT.STR
-    // Coding: 1040,vscp-type,sensorindex(0-255), unit (0-255), zone(0-255),
-    // subzone(0-255)
-    //
-    // Type = 2
-    // ====================================================================
-    // Send CLASS2.MEASUREMENT.FLOAT
-    // Coding: 1060,vscp-type,sensorindex(0-255), unit (0-255), zone(0-255),
-    // subzone(0-255)
-    //
-
-    // strName = m_prefix + std::string("_simplify");
-    // if (VSCP_ERROR_SUCCESS == m_srv.getRemoteVariableValue(strName, str)) {
-    //     m_simplify = str;
-    // }
-
-    // if (m_simplify.length()) {
-
-    //     m_bSimplify = true;
-    //     std::deque<std::string> tokensSimple;
-    //     vscp_split(tokensSimple, m_simplify, ",");
-
-    //     // simple type
-    //     if (!tokensSimple.empty()) {
-    //         m_simple_vscpclass = vscp_readStringValue(tokensSimple.front());
-    //         tokensSimple.pop_front();
-    //     }
-
-    //     switch (m_simple_vscpclass) {
-
-    //         case VSCP_CLASS2_MEASUREMENT_STR:
-
-    //             // simple vscp-type
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_vscptype =
-    //                   vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             // simple sensorindex
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_sensorindex =
-    //                   vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             // simple unit
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_unit = vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             // simple zone
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_zone = vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             // simple subzone
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_subzone =
-    //                   vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             break;
-
-    //         case VSCP_CLASS2_MEASUREMENT_FLOAT:
-
-    //             // simple vscp-type
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_vscptype =
-    //                   vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             // simple sensorindex
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_sensorindex =
-    //                   vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             // simple unit
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_unit = vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             // simple zone
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_zone = vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             // simple subzone
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_subzone =
-    //                   vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             break;
-
-    //         case VSCP_CLASS1_MEASUREMENT:
-    //         default:
-
-    //             // simple vscp-type
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_vscptype =
-    //                   vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-
-    //             // Coding
-    //             if (!tokensSimple.empty()) {
-    //                 std::string strcoding = tokensSimple.front();
-    //                 tokensSimple.pop_front();
-    //                 vscp_trim(strcoding);
-    //                 m_simple_coding = VSCP_DATACODING_STRING;
-    //                 if (0 == vscp_strcasecmp(str.c_str(), "FLOAT")) {
-    //                     m_simple_coding = VSCP_DATACODING_SINGLE;
-    //                 }
-    //             }
-
-    //             // simple sensorindex
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_sensorindex =
-    //                   vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-    //             if (m_simple_sensorindex > 7)
-    //                 m_simple_sensorindex = 7;
-
-    //             // simple unit
-    //             if (!tokensSimple.empty()) {
-    //                 m_simple_unit = vscp_readStringValue(tokensSimple.front());
-    //                 tokensSimple.pop_front();
-    //             }
-    //             if (m_simple_unit > 7)
-    //                 m_simple_unit = 7;
-
-    //             break;
-    //     }
-
-    // } else {
-    //     m_bSimplify = false;
-    // }
-
-    if (m_bSubscribe) {
-        // QOS set from variable read or constructor
-        m_topic_list[0].topic = new char(m_topic.length() + 1);
-        assert(NULL != m_topic_list[0].topic);
-        if (NULL != m_topic_list[0].topic) {
-            memset((void*)m_topic_list[0].topic, 0, m_topic.length() + 1);
-            memcpy(
-              (void*)m_topic_list[0].topic, m_topic.c_str(), m_topic.length());
-        }
+    // Read configuration file
+    if (!doLoadConfig()) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Failed to load configuration file [%s]",
+               m_path.c_str());
     }
 
-    // Close the channel
-    // m_srv.doCmdClose();
+    // start the workerthread
+    if (pthread_create(m_threadWork, NULL, workerThread, this)) {
 
-    // start the worker thread
-    m_pWrkObj = new CWrkThreadObj();
-    if (NULL != m_pWrkObj) {
-        m_pWrkObj->m_pObj = this;
-        if (pthread_create(m_threadWork, NULL, workerTread, this)) {
-
-            syslog(LOG_ERR, "Unable to start worker thread.");
-            return false;
-        }
-    } else {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to start worker thread.");
         return false;
+    }
+
+    if (m_bSubscribe) {
+
+        int rv;
+        if (MOSQ_ERR_SUCCESS !=
+            (rv = mosquitto_sub_topic_check(m_topic.c_str()))) {
+            switch (rv) {
+
+                case MOSQ_ERR_INVAL:
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] The topic contains a + or a # that is "
+                      "in an invalid position, or if it is too long.");
+                    return false;
+                    break;
+
+                case MOSQ_ERR_MALFORMED_UTF8:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Topic is not valid UTF-8");
+                    return false;
+                    break;
+            }
+        }
+
+    } else {
     }
 
     return true;
@@ -897,7 +419,334 @@ Cmqttobj::close(void)
         return;
 
     m_bQuit = true; // terminate the thread
-    sleep(1);       // Give the thread some time to terminate
+
+    // Wait for workerthread to end
+    int rv;
+    if (0 != (rv = pthread_join(*m_threadWork, NULL))) {
+        switch (rv) {
+
+            case EDEADLK:
+                syslog(LOG_ERR,
+                       "[vscpl2drv-mqtt] A deadlock was detected (e.g., two "
+                       "threads tried to join with each other).");
+                break;
+
+            case EINVAL:
+                syslog(
+                  LOG_ERR,
+                  "[vscpl2drv-mqtt] workerthread is not a joinable thread.");
+                sleep(1); // Wait instead
+                break;
+
+            case ESRCH:
+                syslog(LOG_ERR,
+                       "[vscpl2drv-mqtt] No thread with the ID thread could be "
+                       "found.");
+                break;
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// loadConfiguration
+//
+
+bool
+Cmqttobj::doLoadConfig(void)
+{
+    FILE* fp;
+
+    fp = fopen(m_path.c_str(), "r");
+    if (NULL == fp) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Failed to open configuration file [%s]",
+               m_path.c_str());
+        return false;
+    }
+
+    XML_Parser xmlParser = XML_ParserCreate("UTF-8");
+    XML_SetUserData(xmlParser, this);
+    XML_SetElementHandler(xmlParser, startSetupParser, endSetupParser);
+
+    void* buf = XML_GetBuffer(xmlParser, XML_BUFF_SIZE);
+
+    size_t file_size = 0;
+    file_size = fread(buf, sizeof(char), XML_BUFF_SIZE, fp);
+
+    if (!XML_ParseBuffer(xmlParser, file_size, file_size == 0)) {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Failed parse XML setup.");
+        XML_ParserFree(xmlParser);
+        return false;
+    }
+
+    XML_ParserFree(xmlParser);
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// saveConfiguration
+//
+
+bool
+Cmqttobj::doSaveConfig(void)
+{
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+
+int depth_hlo_parser = 0;
+
+void
+startHLOParser(void* data, const char* name, const char** attr)
+{
+    CHLO* pObj = (CHLO*)data;
+    if (NULL == pObj)
+        return;
+
+    if ((0 == strcmp(name, "vscp-cmd")) && (0 == depth_setup_parser)) {
+
+        for (int i = 0; attr[i]; i += 2) {
+
+            std::string attribute = attr[i + 1];
+            vscp_trim(attribute);
+
+            if (0 == strcasecmp(attr[i], "op")) {
+                if (!attribute.empty()) {
+                    pObj->m_op = vscp_readStringValue(attribute);
+                    vscp_makeUpper(attribute);
+                    if (attribute == "VSCP-NOOP") {
+                        pObj->m_op = HLO_OP_NOOP;
+                    } else if (attribute == "VSCP-READVAR") {
+                        pObj->m_op = HLO_OP_READ_VAR;
+                    } else if (attribute == "VSCP-WRITEVAR") {
+                        pObj->m_op = HLO_OP_WRITE_VAR;
+                    } else if (attribute == "VSCP-LOAD") {
+                        pObj->m_op = HLO_OP_LOAD;
+                    } else if (attribute == "VSCP-SAVE") {
+                        pObj->m_op = HLO_OP_SAVE;
+                    } else if (attribute == "CALCULATE") {
+                        pObj->m_op = HLO_OP_SAVE;
+                    } else {
+                        pObj->m_op = HLO_OP_UNKNOWN;
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "name")) {
+                if (!attribute.empty()) {
+                    vscp_makeUpper(attribute);
+                    pObj->m_name = attribute;
+                }
+            } else if (0 == strcasecmp(attr[i], "type")) {
+                if (!attribute.empty()) {
+                    pObj->m_varType = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "value")) {
+                if (!attribute.empty()) {
+                    if (vscp_base64_std_decode(attribute)) {
+                        pObj->m_value = attribute;
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "full")) {
+                if (!attribute.empty()) {
+                    vscp_makeUpper(attribute);
+                    if ("TRUE" == attribute) {
+                        pObj->m_bFull = true;
+                    } else {
+                        pObj->m_bFull = false;
+                    }
+                }
+            }
+        }
+    }
+
+    depth_hlo_parser++;
+}
+
+void
+endHLOParser(void* data, const char* name)
+{
+    depth_hlo_parser--;
+}
+
+// ----------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////////////////////////////
+// parseHLO
+//
+
+bool
+Cmqttobj::parseHLO(uint16_t size, uint8_t* inbuf, CHLO* phlo)
+{
+    // Check pointers
+    if (NULL == inbuf) {
+        syslog(
+          LOG_ERR,
+          "[vscpl2drv-automation] HLO parser: HLO in-buffer pointer is NULL.");
+        return false;
+    }
+
+    if (NULL == phlo) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-automation] HLO parser: HLO obj pointer is NULL.");
+        return false;
+    }
+
+    if (!size) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-automation] HLO parser: HLO buffer size is zero.");
+        return false;
+    }
+
+    XML_Parser xmlParser = XML_ParserCreate("UTF-8");
+    XML_SetUserData(xmlParser, this);
+    XML_SetElementHandler(xmlParser, startHLOParser, endHLOParser);
+
+    void* buf = XML_GetBuffer(xmlParser, XML_BUFF_SIZE);
+
+    // Copy in the HLO object
+    memcpy(buf, inbuf, size);
+
+    if (!XML_ParseBuffer(xmlParser, size, size == 0)) {
+        syslog(LOG_ERR, "[vscpl2drv-automation] Failed parse XML setup.");
+        XML_ParserFree(xmlParser);
+        return false;
+    }
+
+    XML_ParserFree(xmlParser);
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// handleHLO
+//
+
+bool
+Cmqttobj::handleHLO(vscpEvent* pEvent)
+{
+    char buf[512]; // Working buffer
+    vscpEventEx ex;
+
+    // Check pointers
+    if (NULL == pEvent) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-automation] HLO handler: NULL event pointer.");
+        return false;
+    }
+
+    CHLO hlo;
+    if (!parseHLO(pEvent->sizeData, pEvent->pdata, &hlo)) {
+        syslog(LOG_ERR, "[vscpl2drv-automation] Failed to parse HLO.");
+        return false;
+    }
+
+    ex.obid = 0;
+    ex.head = 0;
+    ex.timestamp = vscp_makeTimeStamp();
+    vscp_setEventExToNow(&ex); // Set time to current time
+    ex.vscp_class = VSCP_CLASS2_PROTOCOL;
+    ex.vscp_type = VSCP2_TYPE_PROTOCOL_HIGH_LEVEL_OBJECT;
+    m_guid.writeGUID(ex.GUID);
+
+    switch (hlo.m_op) {
+
+        case HLO_OP_NOOP:
+            // Send positive response
+            sprintf(buf,
+                    HLO_CMD_REPLY_TEMPLATE,
+                    "noop",
+                    "OK",
+                    "NOOP commaned executed correctly.");
+
+            memset(ex.data, 0, sizeof(ex.data));
+            ex.sizeData = strlen(buf);
+            memcpy(ex.data, buf, ex.sizeData);
+
+            // Put event in receive queue
+            return eventExToReceiveQueue(ex);
+
+        case HLO_OP_READ_VAR:
+            if ("SUNRISE" == hlo.m_name) {
+                /*sprintf(buf,
+                        HLO_READ_VAR_REPLY_TEMPLATE,
+                        "sunrise",
+                        "OK",
+                        VSCP_REMOTE_VARIABLE_CODE_DATETIME,
+                        vscp_convertToBASE64(getSunriseTime().getISODateTime())
+                          .c_str());*/
+            } else {
+                sprintf(buf,
+                        HLO_READ_VAR_ERR_REPLY_TEMPLATE,
+                        hlo.m_name.c_str(),
+                        ERR_VARIABLE_UNKNOWN,
+                        vscp_convertToBASE64(std::string("Unknown variable"))
+                          .c_str());
+            }
+            break;
+
+        case HLO_OP_WRITE_VAR:
+            if ("SUNRISE" == hlo.m_name) {
+                // Read Only variable
+                sprintf(buf,
+                        HLO_READ_VAR_ERR_REPLY_TEMPLATE,
+                        "sunrise",
+                        VSCP_REMOTE_VARIABLE_CODE_BOOLEAN,
+                        "Variable is read only.");
+            } else {
+                sprintf(buf,
+                        HLO_READ_VAR_ERR_REPLY_TEMPLATE,
+                        hlo.m_name.c_str(),
+                        1,
+                        vscp_convertToBASE64(std::string("Unknown variable"))
+                          .c_str());
+            }
+            break;
+
+        case HLO_OP_SAVE:
+            doSaveConfig();
+            break;
+
+        case HLO_OP_LOAD:
+            doLoadConfig();
+            break;
+
+        default:
+            break;
+    };
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// eventExToReceiveQueue
+//
+
+bool
+Cmqttobj::eventExToReceiveQueue(vscpEventEx& ex)
+{
+    vscpEvent* pev = new vscpEvent();
+    if (!vscp_convertVSCPfromEx(pev, &ex)) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Failed to convert event from ex to ev.");
+        vscp_deleteVSCPevent(pev);
+        return false;
+    }
+    if (NULL != pev) {
+        if (vscp_doLevel2Filter(pev, &m_vscpfilterRx)) {
+            pthread_mutex_lock(&m_mutexReceiveQueue);
+            m_receiveList.push_back(pev);
+            sem_post(&m_semReceiveQueue);
+            pthread_mutex_unlock(&m_mutexReceiveQueue);
+        } else {
+            vscp_deleteVSCPevent(pev);
+        }
+    } else {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to allocate event storage.");
+    }
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -915,97 +764,651 @@ Cmqttobj::addEvent2SendQueue(const vscpEvent* pEvent)
 }
 
 //////////////////////////////////////////////////////////////////////
-//                Workerthread - CWrkThreadObj
+// addEvent2ReceiveQueue
+//
+
+bool
+Cmqttobj::addEvent2ReceiveQueue(const vscpEvent* pEvent)
+{
+    pthread_mutex_lock(&m_mutexReceiveQueue);
+    m_sendList.push_back((vscpEvent*)pEvent);
+    sem_post(&m_semReceiveQueue);
+    pthread_mutex_unlock(&m_mutexReceiveQueue);
+    return true;
+}
+
 //////////////////////////////////////////////////////////////////////
+// Connect callback
+//
 
-CWrkThreadObj::CWrkThreadObj()
+void
+on_connect(struct mosquitto* mosq, void* obj, int rc, int flags)
 {
-    m_pObj = NULL;
+    // We have a connect with a remote server
+    if (NULL == obj) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add connect event due to missing "
+               "object pointer.");
+        return;
+    }
+
+    Cmqttobj* pObj = (Cmqttobj*)obj;
+
+    vscpEvent* pEvent = new vscpEvent;
+    if (NULL == pEvent) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add connect event due to memory "
+               "problem (event).");
+        return;
+    }
+
+    pEvent->pdata = new uint8_t[3];
+    if (NULL == pEvent->pdata) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add connect event due to memory "
+               "problem (data).");
+        vscp_deleteVSCPevent_v2(&pEvent);
+        return;
+    }
+
+    pEvent->head = VSCP_HEADER16_DUMB;
+    pEvent->obid = 0;
+    pEvent->timestamp = 0; // Let i&f set timestamp
+    vscp_setEventToNow(pEvent);
+    pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
+    pEvent->vscp_type = VSCP_TYPE_INFORMATION_CONNECT;
+    pEvent->sizeData = 3;
+    pEvent->pdata[0] = pObj->m_index;
+    pEvent->pdata[1] = pObj->m_zone;
+    pEvent->pdata[2] = pObj->m_subzone;
+    pObj->m_guid.writeGUID(pEvent->GUID);
+
+    if (!pObj->addEvent2ReceiveQueue(pEvent)) {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
+        vscp_deleteVSCPevent_v2(&pEvent);
+    }
 }
 
-CWrkThreadObj::~CWrkThreadObj()
+//////////////////////////////////////////////////////////////////////
+// Disconnect callback
+//
+
+void
+on_disconnect(struct mosquitto* mosq, void* obj, int rc)
 {
-    ;
+    // We have a connect with a remote server
+    if (NULL == obj) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add disconnect event due to missing "
+               "object pointer.");
+        return;
+    }
+
+    Cmqttobj* pObj = (Cmqttobj*)obj;
+
+    vscpEvent* pEvent = new vscpEvent;
+    if (NULL == pEvent) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add disconnect event due to memory "
+               "problem (event).");
+        return;
+    }
+
+    pEvent->pdata = new uint8_t[3];
+    if (NULL == pEvent->pdata) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add disconnect event due to memory "
+               "problem (data).");
+        vscp_deleteVSCPevent_v2(&pEvent);
+        return;
+    }
+
+    pEvent->head = VSCP_HEADER16_DUMB;
+    pEvent->obid = 0;
+    pEvent->timestamp = 0; // Let i&f set timestamp
+    vscp_setEventToNow(pEvent);
+    pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
+    pEvent->vscp_type = VSCP_TYPE_INFORMATION_DISCONNECT;
+    pEvent->sizeData = 3;
+    pEvent->pdata[0] = pObj->m_index;
+    pEvent->pdata[1] = pObj->m_zone;
+    pEvent->pdata[2] = pObj->m_subzone;
+    pObj->m_guid.writeGUID(pEvent->GUID);
+
+    if (!pObj->addEvent2ReceiveQueue(pEvent)) {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
+        vscp_deleteVSCPevent_v2(&pEvent);
+    }
 }
+
+//////////////////////////////////////////////////////////////////////
+// Publish callback
+//
+
+void
+on_publish(struct mosquitto* mosq, void* obj, int mid)
+{
+    // We have a connect with a remote server
+    if (NULL == obj) {
+        syslog(
+          LOG_ERR,
+          "[vscpl2drv-mqtt] Unable to add publish success event due to missing "
+          "object pointer.");
+        return;
+    }
+
+    Cmqttobj* pObj = (Cmqttobj*)obj;
+
+    vscpEvent* pEvent = new vscpEvent;
+    if (NULL == pEvent) {
+        syslog(
+          LOG_ERR,
+          "[vscpl2drv-mqtt] Unable to add publish success event due to memory "
+          "problem (event).");
+        return;
+    }
+
+    pEvent->pdata = new uint8_t[3];
+    if (NULL == pEvent->pdata) {
+        syslog(
+          LOG_ERR,
+          "[vscpl2drv-mqtt] Unable to add publish success event due to memory "
+          "problem (data).");
+        vscp_deleteVSCPevent_v2(&pEvent);
+        return;
+    }
+
+    pEvent->head = VSCP_HEADER16_DUMB;
+    pEvent->obid = 0;
+    pEvent->timestamp = 0; // Let i&f set timestamp
+    vscp_setEventToNow(pEvent);
+    pEvent->vscp_class = VSCP_CLASS1_ERROR;
+    pEvent->vscp_type = VSCP_TYPE_ERROR_SUCCESS;
+    pEvent->sizeData = 4;
+    pEvent->pdata[0] = pObj->m_index;
+    pEvent->pdata[1] = pObj->m_zone;
+    pEvent->pdata[2] = pObj->m_subzone;
+    pEvent->pdata[3] = ERROR_CODE_SUCCESS_PUBLISH; // Publish
+    pObj->m_guid.writeGUID(pEvent->GUID);
+
+    if (!pObj->addEvent2ReceiveQueue(pEvent)) {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
+        vscp_deleteVSCPevent_v2(&pEvent);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// Subscribe callback
+//
+
+void
+on_subscribe(struct mosquitto* mosq,
+             void* obj,
+             int mid,
+             int qos_count,
+             const int* granted_qos)
+{
+    // We have a connect with a remote server
+    if (NULL == obj) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add subscribe success event due to "
+               "missing object pointer.");
+        return;
+    }
+
+    Cmqttobj* pObj = (Cmqttobj*)obj;
+
+    vscpEvent* pEvent = new vscpEvent;
+    if (NULL == pEvent) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add subscribe success event due to "
+               "memory problem (event).");
+        return;
+    }
+
+    pEvent->pdata = new uint8_t[3];
+    if (NULL == pEvent->pdata) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add subscribe success event due to "
+               "memory problem (data).");
+        vscp_deleteVSCPevent_v2(&pEvent);
+        return;
+    }
+
+    pEvent->head = VSCP_HEADER16_DUMB;
+    pEvent->obid = 0;
+    pEvent->timestamp = 0; // Let i&f set timestamp
+    vscp_setEventToNow(pEvent);
+    pEvent->vscp_class = VSCP_CLASS1_ERROR;
+    pEvent->vscp_type = VSCP_TYPE_ERROR_SUCCESS;
+    pEvent->sizeData = 4;
+    pEvent->pdata[0] = pObj->m_index;
+    pEvent->pdata[1] = pObj->m_zone;
+    pEvent->pdata[2] = pObj->m_subzone;
+    pEvent->pdata[3] = ERROR_CODE_SUCCESS_SUBSCRIBE; // Subscribe
+    pObj->m_guid.writeGUID(pEvent->GUID);
+
+    if (!pObj->addEvent2ReceiveQueue(pEvent)) {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
+        vscp_deleteVSCPevent_v2(&pEvent);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// Unsubscribe callback
+//
+
+void
+on_unsubscribe(struct mosquitto* mosq, void* obj, int mid)
+{
+    // We have a connect with a remote server
+    if (NULL == obj) {
+        syslog(
+          LOG_ERR,
+          "[vscpl2drv-mqtt] Unable to add unsubscribe success event due to "
+          "missing object pointer.");
+        return;
+    }
+
+    Cmqttobj* pObj = (Cmqttobj*)obj;
+
+    vscpEvent* pEvent = new vscpEvent;
+    if (NULL == pEvent) {
+        syslog(
+          LOG_ERR,
+          "[vscpl2drv-mqtt] Unable to add unsubscribe success event due to "
+          "memory problem (event).");
+        return;
+    }
+
+    pEvent->pdata = new uint8_t[3];
+    if (NULL == pEvent->pdata) {
+        syslog(
+          LOG_ERR,
+          "[vscpl2drv-mqtt] Unable to add unsubscribe success event due to "
+          "memory problem (data).");
+        vscp_deleteVSCPevent_v2(&pEvent);
+        return;
+    }
+
+    pEvent->head = VSCP_HEADER16_DUMB;
+    pEvent->obid = 0;
+    pEvent->timestamp = 0; // Let i&f set timestamp
+    vscp_setEventToNow(pEvent);
+    pEvent->vscp_class = VSCP_CLASS1_ERROR;
+    pEvent->vscp_type = VSCP_TYPE_ERROR_SUCCESS;
+    pEvent->sizeData = 4;
+    pEvent->pdata[0] = pObj->m_index;
+    pEvent->pdata[1] = pObj->m_zone;
+    pEvent->pdata[2] = pObj->m_subzone;
+    pEvent->pdata[3] = ERROR_CODE_SUCCESS_UNSUBSCRIBE; // Unsubscribe
+    pObj->m_guid.writeGUID(pEvent->GUID);
+
+    if (!pObj->addEvent2ReceiveQueue(pEvent)) {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
+        vscp_deleteVSCPevent_v2(&pEvent);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// Message callback
+//
+
+void
+on_message(struct mosquitto* mosq,
+           void* obj,
+           const struct mosquitto_message* message)
+{
+    std::string str;
+
+    // We have a connect with a remote server
+    if (NULL == obj) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add incoming event due to "
+               "missing object pointer.");
+        return;
+    }
+
+    Cmqttobj* pObj = (Cmqttobj*)obj;
+
+    vscpEvent* pEvent = new vscpEvent;
+    if (NULL == pEvent) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Unable to add incoming event due to "
+               "memory problem (event).");
+        return;
+    }
+
+    switch (pObj->m_format) {
+
+        case VSCP_MQTT_FORMAT_RAW:
+            syslog(LOG_ERR,
+                   "[vscpl2drv-mqtt] Unable to add incoming event: Unsupported "
+                   "message format.");
+            vscp_deleteVSCPevent_v2(&pEvent);
+            return;
+
+        case VSCP_MQTT_FORMAT_STRING:
+            vscp_setVscpEventFromString(pEvent, str);
+            break;
+
+        case VSCP_MQTT_FORMAT_XML:
+            vscp_convertJSONToEvent(pEvent, str);
+            break;
+
+        case VSCP_MQTT_FORMAT_JSON:
+            vscp_convertJSONToEvent(pEvent, str);
+            break;
+
+        default:
+            syslog(LOG_ERR,
+                   "[vscpl2drv-mqtt] Unable to add incoming event: Unknown "
+                   "message format.");
+            vscp_deleteVSCPevent_v2(&pEvent);
+            return;
+    }
+
+    if (!pObj->addEvent2ReceiveQueue(pEvent)) {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add incoming event.");
+        vscp_deleteVSCPevent_v2(&pEvent);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// Login callback
+//
+
+void
+on_log(struct mosquitto* mosq, void* obj, int level, const char* str)
+{}
 
 //////////////////////////////////////////////////////////////////////
 // Workerthread
 //
 
 void*
-workerTread(void* pData)
+workerThread(void* pData)
 {
-    int cnt_poll = 0;
-    std::string str;
-    struct mg_connection* nc;
-    struct mg_mgr* pmgr = new mg_mgr;
-    assert(NULL != pmgr);
-    uint16_t msgid = 0;
+    int rv;
+    struct mosquitto* mosq;
+    uint32_t timestamp = vscp_getMsTimeStamp();
 
     if (NULL == pData) {
-        syslog(LOG_ERR, "Missing thread object!");
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Missing thread object!");
         return NULL;
     }
 
     Cmqttobj* pObj = (Cmqttobj*)pData;
 
-    // mgr.user_data = m_pObj;
-    mg_mgr_init(pmgr, pObj);
+    if (NULL == (mosq = mosquitto_new(pObj->m_sessionid.c_str(), true, pObj))) {
+        switch (errno) {
 
-    if (NULL == (nc = mg_connect(
-                   pmgr, (const char*)pObj->m_hostMQTT.c_str(), ev_handler))) {
-#ifdef DEBUG
-        fprintf(stderr,
-                "ns_connect(%s) failed\n",
-                (const char*)m_pObj->m_hostMQTT.c_str());
-#endif
-#ifndef WIN32
-        syslog(LOG_INFO, "VSCP MQTTT Driver - ns_connet failed\n");
-#endif
-        return NULL;
+            case ENOMEM:
+                syslog(LOG_ERR, "[vscpl2drv-mqtt] Out of memory.");
+                break;
+
+            case EINVAL:
+                syslog(LOG_ERR, "[vscpl2drv-mqtt] Invalid input parameters.");
+                break;
+        }
     }
+
+    // Register callbacks
+    mosquitto_connect_with_flags_callback_set(mosq, on_connect);
+    mosquitto_disconnect_callback_set(mosq, on_disconnect);
+    mosquitto_publish_callback_set(mosq, on_publish);
+    mosquitto_message_callback_set(mosq, on_message);
+    mosquitto_subscribe_callback_set(mosq, on_subscribe);
+    mosquitto_unsubscribe_callback_set(mosq, on_unsubscribe);
+    mosquitto_log_callback_set(mosq, on_log);
 
     if (pObj->m_bSubscribe) {
 
-        while (!pObj->m_bQuit) {
+        // * * * subscribe * * *
 
-            mg_mgr_poll(pmgr, 100);
-            cnt_poll++;
+        if (MOSQ_ERR_SUCCESS !=
+            (rv = mosquitto_subscribe(
+               mosq, NULL, pObj->m_topic.c_str(), pObj->m_qos))) {
 
-            // Keep the connection alive
-            if (cnt_poll > 600) {
-                mg_mqtt_pong(nc);
-                cnt_poll = 0;
+            switch (rv) {
+                case MOSQ_ERR_INVAL:
+
+                    break;
+
+                case MOSQ_ERR_NOMEM:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] An out of memory condition "
+                           "occurred..");
+                    break;
+
+                case MOSQ_ERR_NO_CONN:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] The client isn’t connected "
+                           "to a broker.");
+                    break;
+
+                case MOSQ_ERR_MALFORMED_UTF8:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] The topic is not valid UTF-8");
+                    break;
+
+                case MOSQ_ERR_OVERSIZE_PACKET:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] The resulting packet would "
+                           "be larger than supported by the broker.");
+                    break;
             }
 
-            if (pObj->m_bConnected) {
+            return NULL;
+        }
 
-            } else {
+        if (MOSQ_ERR_SUCCESS !=
+            (rv = mosquitto_unsubscribe(mosq, NULL, pObj->m_topic.c_str()))) {
+            switch (rv) {
+                case MOSQ_ERR_INVAL:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] An input parameters are "
+                           "invalid.");
+                    break;
 
-                // Give system time to connect
-                // usleep( 1000000 );
+                case MOSQ_ERR_NOMEM:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] An out of memory condition "
+                           "occurred..");
+                    break;
 
-                // Try to connect again
-                // nc = ns_connect( pmgr,
-                //                    (const char
-                //                    *)pObj->m_hostMQTT.c_str(), ev_handler
-                //                    );
+                case MOSQ_ERR_NO_CONN:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] The client isn’t connected "
+                           "to a broker.");
+                    break;
 
-                // ns_mqtt_subscribe( nc, pObj->m_topic_list, 1, 42 );
+                case MOSQ_ERR_MALFORMED_UTF8:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] The topic is not valid UTF-8");
+                    break;
+
+                case MOSQ_ERR_OVERSIZE_PACKET:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] The resulting packet would "
+                           "be larger than supported by the broker.");
+                    break;
             }
         }
 
-    }
-    // Publish
-    else {
+        while (!pObj->m_bQuit) {
+
+            // Send heartbeat if it's time for that
+            if ((vscp_getMsTimeStamp() - timestamp) > 60000) {
+
+                timestamp = vscp_getMsTimeStamp();
+
+                vscpEvent* pEvent = new vscpEvent;
+                if (NULL == pEvent) {
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] Unable to add incoming event due to "
+                      "memory problem (event).");
+                    return NULL;
+                }
+
+                pEvent->head = VSCP_HEADER16_DUMB;
+                pEvent->obid = 0;
+                pEvent->timestamp = 0; // Let i&f set timestamp
+                vscp_setEventToNow(pEvent);
+                pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
+                pEvent->vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
+                pEvent->sizeData = 3;
+                pEvent->pdata[0] = pObj->m_index;
+                pEvent->pdata[1] = pObj->m_zone;
+                pEvent->pdata[2] = pObj->m_subzone;
+                pObj->m_guid.writeGUID(pEvent->GUID);
+
+                if (!pObj->addEvent2ReceiveQueue(pEvent)) {
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Unable to add subscribe heatbeat "
+                           "event.");
+                    vscp_deleteVSCPevent_v2(&pEvent);
+                }
+            }
+
+            if (MOSQ_ERR_SUCCESS != (rv = mosquitto_loop(mosq, 100, 1))) {
+                switch (rv) {
+                    case MOSQ_ERR_INVAL:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] An input parameters are "
+                               "invalid.");
+                        pObj->m_bQuit = true;
+                        break;
+
+                    case MOSQ_ERR_NOMEM:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] An out of memory condition "
+                               "occurred..");
+                        pObj->m_bQuit = true;
+                        break;
+
+                    case MOSQ_ERR_NO_CONN:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] The client isn’t connected "
+                               "to a broker.");
+                        pObj->m_bQuit = true;
+                        break;
+
+                    case MOSQ_ERR_CONN_LOST:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] The connection to the "
+                               "broker was lost.");
+                        break;
+
+                    case MOSQ_ERR_PROTOCOL:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] There is a protocol "
+                               "error communicating with the broker.");
+                        pObj->m_bQuit = true;
+                        break;
+
+                    case MOSQ_ERR_ERRNO:
+                        char buf[128];
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] A systemcall returned "
+                               "an error [%d] %s",
+                               errno,
+                               strerror_r(errno, buf, sizeof(buf)));
+                        pObj->m_bQuit = true;
+                        break;
+                }
+            }
+        }
+
+    } else {
+
+        // * * * publish * * *
+
+        std::string str;
 
         while (!pObj->m_bQuit) {
 
-            mg_mgr_poll(pmgr, 100);
+            // Send heartbeat if it's time for that
+            if ((vscp_getMsTimeStamp() - timestamp) > 60000) {
 
-            // Wait for connection
-            if (!pObj->m_bConnected) {
-                continue;
+                timestamp = vscp_getMsTimeStamp();
+
+                vscpEvent* pEvent = new vscpEvent;
+                if (NULL == pEvent) {
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] Unable to add incoming event due to "
+                      "memory problem (event).");
+                    return NULL;
+                }
+
+                pEvent->head = VSCP_HEADER16_DUMB;
+                pEvent->obid = 0;
+                pEvent->timestamp = 0; // Let i&f set timestamp
+                vscp_setEventToNow(pEvent);
+                pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
+                pEvent->vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
+                pEvent->sizeData = 3;
+                pEvent->pdata[0] = pObj->m_index;
+                pEvent->pdata[1] = pObj->m_zone;
+                pEvent->pdata[2] = pObj->m_subzone;
+                pObj->m_guid.writeGUID(pEvent->GUID);
+
+                if (!pObj->addEvent2ReceiveQueue(pEvent)) {
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] Unable to add publish heatbeat event.");
+                    vscp_deleteVSCPevent_v2(&pEvent);
+                }
+            }
+
+            if (MOSQ_ERR_SUCCESS != (rv = mosquitto_loop(mosq, 0, 1))) {
+                switch (rv) {
+                    case MOSQ_ERR_INVAL:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] An input parameters are "
+                               "invalid.");
+                        pObj->m_bQuit = true;
+                        break;
+
+                    case MOSQ_ERR_NOMEM:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] An out of memory condition "
+                               "occurred..");
+                        pObj->m_bQuit = true;
+                        break;
+
+                    case MOSQ_ERR_NO_CONN:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] The client isn’t connected "
+                               "to a broker.");
+                        pObj->m_bQuit = true;
+                        break;
+
+                    case MOSQ_ERR_CONN_LOST:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] The connection to the "
+                               "broker was lost.");
+                        break;
+
+                    case MOSQ_ERR_PROTOCOL:
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] There is a protocol "
+                               "error communicating with the broker.");
+                        pObj->m_bQuit = true;
+                        break;
+
+                    case MOSQ_ERR_ERRNO:
+                        char buf[128];
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] A systemcall returned "
+                               "an error [%d] %s",
+                               errno,
+                               strerror_r(errno, buf, sizeof(buf)));
+                        pObj->m_bQuit = true;
+                        break;
+                }
             }
 
             struct timespec ts;
@@ -1021,15 +1424,32 @@ workerTread(void* pData)
                 vscpEvent* pEvent = pObj->m_sendList.front();
                 pObj->m_sendList.pop_front();
                 pthread_mutex_unlock(&pObj->m_mutexSendQueue);
-                if (NULL == pEvent)
+
+                if (NULL == pEvent) {
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] A null event received. Skipping.");
                     continue;
+                }
 
                 // If simple there must also be data
-                if (pObj->m_bSimplify && (NULL != pEvent->pdata)) {
+                if (pObj->m_bSimplify && vscp_isVSCPMeasurement(pEvent)) {
+
+                    // Must be data
+                    if ((NULL != pEvent->pdata)) {
+                        syslog(LOG_ERR,
+                               "[vscpl2drv-mqtt] A malformed meaurement event "
+                               "received (no data). Skipping.  ");
+                        vscp_deleteVSCPevent(pEvent);
+                        continue;
+                    }
+
+                    // Get measurement value
+                    vscp_getVSCPMeasurementAsString(str, pEvent);
 
                     switch (pObj->m_simple_vscpclass) {
 
                         case VSCP_CLASS2_MEASUREMENT_STR: {
+                            // classes should be the same
                             if (VSCP_CLASS2_MEASUREMENT_STR !=
                                 pEvent->vscp_class) {
                                 break;
@@ -1037,7 +1457,7 @@ workerTread(void* pData)
 
                             // There must be at least one
                             // character in the string
-                            if (pEvent->sizeData < 5) {
+                            if (pEvent->sizeData < 1) {
                                 break;
                             }
 
@@ -1061,12 +1481,6 @@ workerTread(void* pData)
                             if (pObj->m_simple_unit != pEvent->pdata[3]) {
                                 break;
                             }
-
-                            char buf[512];
-                            memset(buf, 0, sizeof(buf));
-                            memcpy(
-                              buf, pEvent->pdata + 4, pEvent->sizeData - 4);
-                            str = std::string(buf);
 
                             goto PUBLISH;
                         } break;
@@ -1099,18 +1513,6 @@ workerTread(void* pData)
                                 break;
                             }
 
-                            uint8_t* p = pEvent->pdata + 4;
-                            if (vscp_isLittleEndian()) {
-                                for (int i = 7; i > 0; i--) {
-                                    pEvent->pdata[4 + 7 - i] = *(p + i);
-                                }
-                            }
-
-                            double val = *((double*)(pEvent->pdata + 4));
-                            char buf[80];
-                            sprintf(buf, "%g", val);
-                            str = std::string(buf);
-
                             goto PUBLISH;
 
                         } break;
@@ -1129,81 +1531,116 @@ workerTread(void* pData)
                                 break;
                             }
 
-                            // vscp_getVSCPMeasurementAsString( pEvent, str );
-                            vscp_writeVscpEventToString(str, pEvent);
                             goto PUBLISH;
-
-                            /*
-                                if ( VSCP_DATACODING_SINGLE ==
-                                    ( pEvent->pdata[ 0 ] &
-                               VSCP_MASK_DATACODING_TYPE ) ) {
-
-                                    uint32_t temp = wxUINT32_SWAP_ON_LE( *(
-                               (uint32_t *)( pEvent->pdata + 1 ) ) ); memcpy(
-                               pEvent->pdata + 1, (void *)&temp, 4 ); float val
-                               = *( (float *)( pEvent->pdata + 1 ) ); char
-                               buf[80]; sprintf( buf, "%f", val ); str =
-                               std::string( buf );
-
-                                    goto PUBLISH;
-                                }
-                                else {  // STRING
-
-                                    char buf[ 10 ];
-                                    memset( buf, 0, sizeof( buf ) );
-                                    if ( pEvent->sizeData >= 8 ) {
-                                        memcpy( buf, pEvent->pdata + 1, 7 );
-                                    }
-                                    else {
-                                        memcpy( buf, pEvent->pdata + 1,
-                               pEvent->sizeData - 1 );
-                                    }
-                                    int ttt = pEvent->pdata[1];
-                                    ttt = pEvent->pdata[2];
-                                    ttt = pEvent->pdata[3];
-                                    str = std::string( buf );
-                                    goto PUBLISH;
-
-                                }
-                            */
 
                         } break;
 
                     } // switch
 
-                } else {
+                } else { // Not measurement and simplify
 
-                    vscp_writeVscpEventToString(str, pEvent);
+                    switch (pObj->m_format) {
+
+                        case VSCP_MQTT_FORMAT_RAW:
+                            syslog(LOG_ERR,
+                                   "[vscpl2drv-mqtt] Unable to send event: "
+                                   "Unsupported message format.");
+                            vscp_deleteVSCPevent_v2(&pEvent);
+                            continue;
+
+                        case VSCP_MQTT_FORMAT_STRING:
+                            vscp_writeVscpEventToString(str, pEvent);
+                            break;
+
+                        case VSCP_MQTT_FORMAT_XML:
+                            vscp_convertEventToJSON(str, pEvent);
+                            break;
+
+                        case VSCP_MQTT_FORMAT_JSON:
+                            vscp_convertEventToXML(str, pEvent);
+                            break;
+                    }
 
                 PUBLISH:
 
-                    mg_mqtt_publish(nc,
-                                    pObj->m_topic.c_str(),
-                                    msgid++,
-                                    MG_MQTT_QOS(pObj->m_topic_list[0].qos),
-                                    (const char*)str.c_str(),
-                                    str.length());
+                    if (MOSQ_ERR_SUCCESS !=
+                        (rv = mosquitto_publish(mosq,
+                                                NULL,
+                                                pObj->m_topic.c_str(),
+                                                str.length(),
+                                                str.c_str(),
+                                                pObj->m_qos,
+                                                false))) {
+                        switch (rv) {
+
+                            case MOSQ_ERR_INVAL:
+                                syslog(LOG_ERR,
+                                       "[vscpl2drv-mqtt] Input parameters were "
+                                       "invalid.");
+                                pObj->m_bQuit = true;
+                                break;
+
+                            case MOSQ_ERR_NOMEM:
+                                syslog(LOG_ERR,
+                                       "[vscpl2drv-mqtt] An out of memory "
+                                       "condition occurred.");
+                                pObj->m_bQuit = true;
+                                break;
+
+                            case MOSQ_ERR_NO_CONN:
+                                syslog(LOG_ERR,
+                                       "[vscpl2drv-mqtt] The client isn’t "
+                                       "connected to a broker.");
+                                pObj->m_bQuit = true;
+                                break;
+
+                            case MOSQ_ERR_PROTOCOL:
+                                syslog(LOG_ERR,
+                                       "[vscpl2drv-mqtt] There is a protocol "
+                                       "error communicating with the broker.");
+                                pObj->m_bQuit = true;
+                                break;
+
+                            case MOSQ_ERR_PAYLOAD_SIZE:
+                                syslog(LOG_ERR,
+                                       "[vscpl2drv-mqtt] The payloadlen is too "
+                                       "large.");
+                                pObj->m_bQuit = true;
+                                break;
+
+                            case MOSQ_ERR_MALFORMED_UTF8:
+                                syslog(LOG_ERR,
+                                       "[vscpl2drv-mqtt] The topic is not "
+                                       "valid UTF-8");
+                                pObj->m_bQuit = true;
+                                break;
+
+                            case MOSQ_ERR_QOS_NOT_SUPPORTED:
+                                syslog(LOG_ERR,
+                                       "[vscpl2drv-mqtt] The QoS is greater "
+                                       "than that supported by the broker.");
+                                pObj->m_bQuit = true;
+                                break;
+
+                            case MOSQ_ERR_OVERSIZE_PACKET:
+                                syslog(
+                                  LOG_ERR,
+                                  "[vscpl2drv-mqtt] The resulting packet would "
+                                  "be larger than supported by the broker.");
+                                pObj->m_bQuit = true;
+                                break;
+                        }
+                    }
                 }
 
-                // We are done with the event - remove data if any
-                if (NULL != pEvent->pdata) {
-                    delete[] pEvent->pdata;
-                    pEvent->pdata = NULL;
-                }
+                // We are done with the event
+                vscp_deleteVSCPevent_v2(&pEvent);
 
             } // Event received
-
-            usleep(50000);
         }
     }
 
-    // Disconnect if we are connected.
-    if (pObj->m_bConnected) {
-        mg_mqtt_disconnect(nc);
-    }
-
-    delete pmgr;
-    pmgr = NULL;
+    mosquitto_destroy(mosq);
 
     return NULL;
 }

@@ -35,15 +35,13 @@ WARNINGS = -Wall
 
 VERSION_DEFS = -DMAJOR_VERSION=$(MAJOR_VERSION) -DMINOR_VERSION=$(MINOR_VERSION) \
 	-DRELEASE_VERSION=$(RELEASE_VERSION) -DBUILD_VERSION=$(BUILD_VERSION)
-MONGOOSE_FLAGS = -DMG_ENABLE_THREADS -DMG_ENABLE_IPV6 -DMG_ENABLE_SSL -DMG_ENABLE_GETADDRINFO
-CFLAGS = -std=c99  -DOPENSSL_API_1_1 ${WARNINGS} -fPIC -DCBC -I..-I../vscp/src/vscp/common  -I../vscp/src/common \
-	-I../mongoose
-CXXFLAGS = -std=c++11 ${WARNINGS} -D__LINUX__ -fPIC -D_REENTRANT   $(MONGOOSE_FLAGS) -I../mongoose
-CPPFLAGS = -D__LINUX__ -fPIC   $(MONGOOSE_FLAGS) ${WARNINGS} -fno-var-tracking-assignments -I..\
- 	-I../vscp/src/vscp/common -I../vscp/src/common -I../mongoose \
-	 -I../vscp/src/common/nlohmann \
-	$(VERSION_DEFS)
+CFLAGS = -std=c99  -g -O0 -DOPENSSL_API_1_1 ${WARNINGS} -fPIC -DCBC -I..-I../vscp/src/vscp/common  -I../vscp/src/common \
 
+CXXFLAGS = -std=c++11 ${WARNINGS} -D__LINUX__ -fPIC -D_REENTRANT  -g -O0 
+CPPFLAGS = -D__LINUX__ -fPIC   ${WARNINGS} -fno-var-tracking-assignments -I..\
+ 	-I../vscp/src/vscp/common -I../vscp/src/common \
+	-I../vscp/src/common/nlohmann \
+	$(VERSION_DEFS)
 
 LDFLAGS = 
 LIBS = -lmosquitto -lexpat -lssl -lrt -lm -lcrypto -lpthread -ldl 
@@ -80,7 +78,6 @@ MQTT_OBJECTS = vscpl2drv_mqtt.o\
 	crc8.o\
 	vscp_aes.o\
 	vscpmd5.o\
-	mongoose.o\
 	fastpbkdf2.o\
 	vscpbase64.o
 
@@ -127,9 +124,6 @@ crc8.o: ../vscp/src/common/crc8.c ../vscp/src/common/crc8.h
 
 vscpbase64.o: ../vscp/src/common/vscpbase64.c ../vscp/src/common/vscpbase64.h
 	$(CC) $(CFLAGS) -c ../vscp/src/common/vscpbase64.c -o $@
-
-mongoose.o: ../mongoose/mongoose.c ../mongoose/mongoose.h
-	$(CC) $(CFLAGS) $(MONGOOSE_CFLAGS) -c ../mongoose/mongoose.c -o $@
 
 fastpbkdf2.o: ../vscp/src/common/fastpbkdf2.c ../vscp/src/common/fastpbkdf2.h
 	$(CC) $(CFLAGS) -c ../vscp/src/common/fastpbkdf2.c -o $@

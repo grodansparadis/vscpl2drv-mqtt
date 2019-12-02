@@ -22,7 +22,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "build vscpl2drv-automation",
+            "preLaunchTask": "build vscpl2drv-mqtt",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ]

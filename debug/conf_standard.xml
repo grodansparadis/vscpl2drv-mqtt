@@ -1,12 +1,28 @@
 <?xml version = "1.0" encoding = "UTF-8" ?>
-    <!-- Version 0.0.1    2019-11-05   -->
+    <!-- Version 0.0.1    2019-11-29   -->
     <config debug="true"
-            write="true"
-            zone="1"
-            subzone="2"
-            longitude="15.1604167"
-            latitude="61.7441833"
-            enable-sunrise="true"
-            enable-sunrise-twilight="true"
-            enable-sunset="true"
-            enable-sunset-twilight="true" />
+            access="rw"
+            index="11"
+            zone="12"
+            subzone="33"
+            filter="incoming-filter"
+            mask="incoming-mask"
+            sessionid=""
+            type="subscribe|publish"
+            topic="mqtt path"
+            prefix="mqtt part prefix"
+            remote-host=""
+            remote-port=""
+            remote-user=""
+            remote-password=""
+            keepalive="true|false"
+        <simple enable="true|false"
+                    vscpclass=""
+                    vscptype=""
+                    coding=""
+                    unit=""
+                    sensoridenx=""
+                    index=""
+                    zone=""
+                    subzone="" />
+    </config>
