@@ -53,10 +53,9 @@ class CWrkThreadObj;
 #define VSCP_MQTT_TYPE_SUBSCRIBE 1
 #define VSCP_MQTT_TYPE_PUBLISH 2
 
-#define VSCP_MQTT_FORMAT_RAW 0
-#define VSCP_MQTT_FORMAT_STRING 1
-#define VSCP_MQTT_FORMAT_XML 2
-#define VSCP_MQTT_FORMAT_JSON 3
+#define VSCP_MQTT_FORMAT_STRING 0
+#define VSCP_MQTT_FORMAT_XML 1
+#define VSCP_MQTT_FORMAT_JSON 2
 
 #define ERROR_CODE_SUCCESS_PUBLISH 0
 #define ERROR_CODE_SUCCESS_SUBSCRIBE 1
@@ -246,7 +245,7 @@ class Cmqttobj
     vscpEventFilter m_vscpfilterTx;
 
     /// Pointer to worker thread
-    pthread_t* m_threadWork;
+    pthread_t m_threadWork;
 
     // Queue
     std::list<vscpEvent*> m_sendList;

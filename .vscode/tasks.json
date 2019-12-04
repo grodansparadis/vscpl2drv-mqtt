@@ -4,7 +4,7 @@
         {
             "taskName": "build vscpl2drv-mqtt",
             "type": "shell",
-            "command": "make",
+            "command": "rm -rf dest; make",
             "args": [],
             "group": {
                 "kind": "build",
@@ -15,7 +15,7 @@
         {
             "taskName": "clean & build vscpl2drv-mqtt",
             "type": "shell",
-            "command": "make clean; make",
+            "command": "rm -rf dest; make clean; make",
             "args": [],
             "group": {
                 "kind": "build",

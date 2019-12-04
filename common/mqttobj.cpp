@@ -45,13 +45,13 @@
 #include <expat.h>
 #include <mosquitto.h>
 
-#include <vscp.h>
 #include <hlo.h>
+#include <remotevariablecodes.h>
+#include <vscp.h>
 #include <vscp_class.h>
 #include <vscp_type.h>
 #include <vscphelper.h>
 #include <vscpremotetcpif.h>
-#include <remotevariablecodes.h>
 
 #include "mqttobj.h"
 
@@ -74,14 +74,14 @@ Cmqttobj::Cmqttobj()
     m_type = VSCP_MQTT_TYPE_UNKNOWN;
     m_format = VSCP_MQTT_FORMAT_STRING;
 
-    // Params identifing this node
+    // Params identifying this node
     m_index = 0;
     m_zone = 0;
     m_subzone = 0;
 
     m_sessionid = "";
     m_keepalive =
-      0; // 0 = Don't keep alive, n = seconds to wait before reconnect
+      60; // 0 = Don't keep alive, n = seconds to wait before reconnect
     m_qos = 0;
 
     // Simple
@@ -145,6 +145,7 @@ Cmqttobj::~Cmqttobj()
             zone="zone identifying this driver"
             subzone="subzone identifying this driver"
             sessionid=""
+            format="1"
             type="subscribe|publish"
             topic="mqtt path"
             prefix="mqtt part prefix"
@@ -295,6 +296,10 @@ startSetupParser(void* data, const char* name, const char** attr)
                         pObj->m_type = VSCP_MQTT_TYPE_SUBSCRIBE;
                     }
                 }
+            } else if (0 == strcasecmp(attr[i], "format")) {
+                if (!attribute.empty()) {
+                    pObj->m_format = vscp_readStringValue(attribute);
+                }
             } else if (0 == strcasecmp(attr[i], "topic")) {
                 if (!attribute.empty()) {
                     pObj->m_topic = attribute;
@@ -371,37 +376,34 @@ Cmqttobj::open(std::string& pathcfg, cguid& guid)
                m_path.c_str());
     }
 
-    // start the workerthread
-    if (pthread_create(m_threadWork, NULL, workerThread, this)) {
+    int rv;
+    if (MOSQ_ERR_SUCCESS != (rv = mosquitto_sub_topic_check(m_topic.c_str()))) {
+        switch (rv) {
 
-        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to start worker thread.");
-        return false;
+            case MOSQ_ERR_INVAL:
+                syslog(LOG_ERR,
+                       "[vscpl2drv-mqtt] The topic contains a + or a # that is "
+                       "in an invalid position, or if it is too long.");
+                return false;
+                break;
+
+            case MOSQ_ERR_MALFORMED_UTF8:
+                syslog(LOG_ERR, "[vscpl2drv-mqtt] Topic is not valid UTF-8");
+                return false;
+                break;
+        }
     }
 
     if (m_bSubscribe) {
-
-        int rv;
-        if (MOSQ_ERR_SUCCESS !=
-            (rv = mosquitto_sub_topic_check(m_topic.c_str()))) {
-            switch (rv) {
-
-                case MOSQ_ERR_INVAL:
-                    syslog(
-                      LOG_ERR,
-                      "[vscpl2drv-mqtt] The topic contains a + or a # that is "
-                      "in an invalid position, or if it is too long.");
-                    return false;
-                    break;
-
-                case MOSQ_ERR_MALFORMED_UTF8:
-                    syslog(LOG_ERR,
-                           "[vscpl2drv-mqtt] Topic is not valid UTF-8");
-                    return false;
-                    break;
-            }
-        }
-
+        ;
     } else {
+        ;
+    }
+
+    // start the workerthread
+    if (pthread_create(&m_threadWork, NULL, workerThread, this)) {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to start worker thread.");
+        return false;
     }
 
     return true;
@@ -422,7 +424,7 @@ Cmqttobj::close(void)
 
     // Wait for workerthread to end
     int rv;
-    if (0 != (rv = pthread_join(*m_threadWork, NULL))) {
+    if (0 != (rv = pthread_join(m_threadWork, NULL))) {
         switch (rv) {
 
             case EDEADLK:
@@ -475,8 +477,12 @@ Cmqttobj::doLoadConfig(void)
     size_t file_size = 0;
     file_size = fread(buf, sizeof(char), XML_BUFF_SIZE, fp);
 
-    if (!XML_ParseBuffer(xmlParser, file_size, file_size == 0)) {
-        syslog(LOG_ERR, "[vscpl2drv-mqtt] Failed parse XML setup.");
+    if (XML_STATUS_OK !=
+        XML_ParseBuffer(xmlParser, file_size, file_size == 0)) {
+        enum XML_Error errcode = XML_GetErrorCode(xmlParser);
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Failed parse XML setup [%s].",
+               XML_ErrorString(errcode));
         XML_ParserFree(xmlParser);
         return false;
     }
@@ -527,8 +533,6 @@ startHLOParser(void* data, const char* name, const char** attr)
                     } else if (attribute == "VSCP-LOAD") {
                         pObj->m_op = HLO_OP_LOAD;
                     } else if (attribute == "VSCP-SAVE") {
-                        pObj->m_op = HLO_OP_SAVE;
-                    } else if (attribute == "CALCULATE") {
                         pObj->m_op = HLO_OP_SAVE;
                     } else {
                         pObj->m_op = HLO_OP_UNKNOWN;
@@ -771,7 +775,7 @@ bool
 Cmqttobj::addEvent2ReceiveQueue(const vscpEvent* pEvent)
 {
     pthread_mutex_lock(&m_mutexReceiveQueue);
-    m_sendList.push_back((vscpEvent*)pEvent);
+    m_receiveList.push_back((vscpEvent*)pEvent);
     sem_post(&m_semReceiveQueue);
     pthread_mutex_unlock(&m_mutexReceiveQueue);
     return true;
@@ -1081,13 +1085,6 @@ on_message(struct mosquitto* mosq,
 
     switch (pObj->m_format) {
 
-        case VSCP_MQTT_FORMAT_RAW:
-            syslog(LOG_ERR,
-                   "[vscpl2drv-mqtt] Unable to add incoming event: Unsupported "
-                   "message format.");
-            vscp_deleteVSCPevent_v2(&pEvent);
-            return;
-
         case VSCP_MQTT_FORMAT_STRING:
             vscp_setVscpEventFromString(pEvent, str);
             break;
@@ -1140,15 +1137,28 @@ workerThread(void* pData)
 
     Cmqttobj* pObj = (Cmqttobj*)pData;
 
-    if (NULL == (mosq = mosquitto_new(pObj->m_sessionid.c_str(), true, pObj))) {
+    char buf[80];
+    char* p = NULL;
+    if (pObj->m_sessionid.length()) {
+        strncpy(buf,
+                pObj->m_sessionid.c_str(),
+                MIN(sizeof(buf) - 2, pObj->m_sessionid.length()));
+        p = buf;
+    }
+
+    if (NULL == (mosq = mosquitto_new(p, true, pObj))) {
         switch (errno) {
 
             case ENOMEM:
-                syslog(LOG_ERR, "[vscpl2drv-mqtt] Out of memory.");
+                syslog(LOG_ERR, "[vscpl2drv-mqtt] Out of memory. Terminating");
+                return NULL;
                 break;
 
             case EINVAL:
-                syslog(LOG_ERR, "[vscpl2drv-mqtt] Invalid input parameters.");
+                syslog(
+                  LOG_ERR,
+                  "[vscpl2drv-mqtt] Invalid input parameters. Terminating.");
+                return NULL;
                 break;
         }
     }
@@ -1161,6 +1171,31 @@ workerThread(void* pData)
     mosquitto_subscribe_callback_set(mosq, on_subscribe);
     mosquitto_unsubscribe_callback_set(mosq, on_unsubscribe);
     mosquitto_log_callback_set(mosq, on_log);
+
+    if (MOSQ_ERR_SUCCESS !=
+        (rv = mosquitto_connect(
+           mosq, pObj->m_host.c_str(), pObj->m_port, pObj->m_keepalive))) {
+        switch (rv) {
+
+            case MOSQ_ERR_INVAL:
+                syslog(
+                  LOG_ERR,
+                  "[vscpl2drv-mqtt] Invalid input parameters. Terminating");
+                mosquitto_destroy(mosq);
+                return NULL;
+
+            case MOSQ_ERR_ERRNO:
+                char errbuf[128];
+                syslog(
+                  LOG_ERR,
+                  "[vscpl2drv-mqtt] A system call returned an error. [%d %s] "
+                  "Terminating",
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                mosquitto_destroy(mosq);
+                return NULL;
+        }
+    }
 
     if (pObj->m_bSubscribe) {
 
@@ -1189,7 +1224,8 @@ workerThread(void* pData)
 
                 case MOSQ_ERR_MALFORMED_UTF8:
                     syslog(LOG_ERR,
-                           "[vscpl2drv-mqtt] The topic is not valid UTF-8");
+                           "[vscpl2drv-mqtt] The topic is not "
+                           "valid UTF-8");
                     break;
 
                 case MOSQ_ERR_OVERSIZE_PACKET:
@@ -1202,40 +1238,6 @@ workerThread(void* pData)
             return NULL;
         }
 
-        if (MOSQ_ERR_SUCCESS !=
-            (rv = mosquitto_unsubscribe(mosq, NULL, pObj->m_topic.c_str()))) {
-            switch (rv) {
-                case MOSQ_ERR_INVAL:
-                    syslog(LOG_ERR,
-                           "[vscpl2drv-mqtt] An input parameters are "
-                           "invalid.");
-                    break;
-
-                case MOSQ_ERR_NOMEM:
-                    syslog(LOG_ERR,
-                           "[vscpl2drv-mqtt] An out of memory condition "
-                           "occurred..");
-                    break;
-
-                case MOSQ_ERR_NO_CONN:
-                    syslog(LOG_ERR,
-                           "[vscpl2drv-mqtt] The client isn’t connected "
-                           "to a broker.");
-                    break;
-
-                case MOSQ_ERR_MALFORMED_UTF8:
-                    syslog(LOG_ERR,
-                           "[vscpl2drv-mqtt] The topic is not valid UTF-8");
-                    break;
-
-                case MOSQ_ERR_OVERSIZE_PACKET:
-                    syslog(LOG_ERR,
-                           "[vscpl2drv-mqtt] The resulting packet would "
-                           "be larger than supported by the broker.");
-                    break;
-            }
-        }
-
         while (!pObj->m_bQuit) {
 
             // Send heartbeat if it's time for that
@@ -1245,10 +1247,10 @@ workerThread(void* pData)
 
                 vscpEvent* pEvent = new vscpEvent;
                 if (NULL == pEvent) {
-                    syslog(
-                      LOG_ERR,
-                      "[vscpl2drv-mqtt] Unable to add incoming event due to "
-                      "memory problem (event).");
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Unable to add "
+                           "incoming event due to "
+                           "memory problem (event).");
                     return NULL;
                 }
 
@@ -1266,7 +1268,8 @@ workerThread(void* pData)
 
                 if (!pObj->addEvent2ReceiveQueue(pEvent)) {
                     syslog(LOG_ERR,
-                           "[vscpl2drv-mqtt] Unable to add subscribe heatbeat "
+                           "[vscpl2drv-mqtt] Unable to add "
+                           "subscribe heatbeat "
                            "event.");
                     vscp_deleteVSCPevent_v2(&pEvent);
                 }
@@ -1276,21 +1279,24 @@ workerThread(void* pData)
                 switch (rv) {
                     case MOSQ_ERR_INVAL:
                         syslog(LOG_ERR,
-                               "[vscpl2drv-mqtt] An input parameters are "
+                               "[vscpl2drv-mqtt] An input "
+                               "parameters are "
                                "invalid.");
                         pObj->m_bQuit = true;
                         break;
 
                     case MOSQ_ERR_NOMEM:
                         syslog(LOG_ERR,
-                               "[vscpl2drv-mqtt] An out of memory condition "
+                               "[vscpl2drv-mqtt] An out of memory "
+                               "condition "
                                "occurred..");
                         pObj->m_bQuit = true;
                         break;
 
                     case MOSQ_ERR_NO_CONN:
                         syslog(LOG_ERR,
-                               "[vscpl2drv-mqtt] The client isn’t connected "
+                               "[vscpl2drv-mqtt] The client isn’t "
+                               "connected "
                                "to a broker.");
                         pObj->m_bQuit = true;
                         break;
@@ -1321,6 +1327,41 @@ workerThread(void* pData)
             }
         }
 
+        if (MOSQ_ERR_SUCCESS !=
+            (rv = mosquitto_unsubscribe(mosq, NULL, pObj->m_topic.c_str()))) {
+            switch (rv) {
+                case MOSQ_ERR_INVAL:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] An input parameters are "
+                           "invalid.");
+                    break;
+
+                case MOSQ_ERR_NOMEM:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] An out of memory condition "
+                           "occurred..");
+                    break;
+
+                case MOSQ_ERR_NO_CONN:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] The client isn’t connected "
+                           "to a broker.");
+                    break;
+
+                case MOSQ_ERR_MALFORMED_UTF8:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] The topic is not "
+                           "valid UTF-8");
+                    break;
+
+                case MOSQ_ERR_OVERSIZE_PACKET:
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] The resulting packet would "
+                           "be larger than supported by the broker.");
+                    break;
+            }
+        }
+
     } else {
 
         // * * * publish * * *
@@ -1336,11 +1377,12 @@ workerThread(void* pData)
 
                 vscpEvent* pEvent = new vscpEvent;
                 if (NULL == pEvent) {
-                    syslog(
-                      LOG_ERR,
-                      "[vscpl2drv-mqtt] Unable to add incoming event due to "
-                      "memory problem (event).");
-                    return NULL;
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Unable to add "
+                           "incoming event due to "
+                           "memory problem (event).");
+                    pObj->m_bQuit = true;
+                    continue;
                 }
 
                 pEvent->head = VSCP_HEADER16_DUMB;
@@ -1350,38 +1392,49 @@ workerThread(void* pData)
                 pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
                 pEvent->vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
                 pEvent->sizeData = 3;
+                pEvent->pdata = new uint8_t[3];
+                if (NULL == pEvent->pdata) {
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Out of memory problem when "
+                           "sending heartbeat.");
+                    pObj->m_bQuit = true;
+                    continue;
+                }
                 pEvent->pdata[0] = pObj->m_index;
                 pEvent->pdata[1] = pObj->m_zone;
                 pEvent->pdata[2] = pObj->m_subzone;
                 pObj->m_guid.writeGUID(pEvent->GUID);
 
                 if (!pObj->addEvent2ReceiveQueue(pEvent)) {
-                    syslog(
-                      LOG_ERR,
-                      "[vscpl2drv-mqtt] Unable to add publish heatbeat event.");
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Unable to add publish "
+                           "heatbeat event.");
                     vscp_deleteVSCPevent_v2(&pEvent);
                 }
             }
 
-            if (MOSQ_ERR_SUCCESS != (rv = mosquitto_loop(mosq, 0, 1))) {
+            if (MOSQ_ERR_SUCCESS != (rv = mosquitto_loop(mosq, 10, 1))) {
                 switch (rv) {
                     case MOSQ_ERR_INVAL:
                         syslog(LOG_ERR,
-                               "[vscpl2drv-mqtt] An input parameters are "
+                               "[vscpl2drv-mqtt] An input "
+                               "parameters are "
                                "invalid.");
                         pObj->m_bQuit = true;
                         break;
 
                     case MOSQ_ERR_NOMEM:
                         syslog(LOG_ERR,
-                               "[vscpl2drv-mqtt] An out of memory condition "
+                               "[vscpl2drv-mqtt] An out of memory "
+                               "condition "
                                "occurred..");
                         pObj->m_bQuit = true;
                         break;
 
                     case MOSQ_ERR_NO_CONN:
                         syslog(LOG_ERR,
-                               "[vscpl2drv-mqtt] The client isn’t connected "
+                               "[vscpl2drv-mqtt] The client isn’t "
+                               "connected "
                                "to a broker.");
                         pObj->m_bQuit = true;
                         break;
@@ -1427,7 +1480,8 @@ workerThread(void* pData)
 
                 if (NULL == pEvent) {
                     syslog(LOG_ERR,
-                           "[vscpl2drv-mqtt] A null event received. Skipping.");
+                           "[vscpl2drv-mqtt] A null event "
+                           "received. Skipping.");
                     continue;
                 }
 
@@ -1437,7 +1491,8 @@ workerThread(void* pData)
                     // Must be data
                     if ((NULL != pEvent->pdata)) {
                         syslog(LOG_ERR,
-                               "[vscpl2drv-mqtt] A malformed meaurement event "
+                               "[vscpl2drv-mqtt] A malformed "
+                               "measurement event "
                                "received (no data). Skipping.  ");
                         vscp_deleteVSCPevent(pEvent);
                         continue;
@@ -1541,32 +1596,48 @@ workerThread(void* pData)
 
                     switch (pObj->m_format) {
 
-                        case VSCP_MQTT_FORMAT_RAW:
-                            syslog(LOG_ERR,
-                                   "[vscpl2drv-mqtt] Unable to send event: "
-                                   "Unsupported message format.");
-                            vscp_deleteVSCPevent_v2(&pEvent);
-                            continue;
-
                         case VSCP_MQTT_FORMAT_STRING:
                             vscp_writeVscpEventToString(str, pEvent);
                             break;
 
                         case VSCP_MQTT_FORMAT_XML:
-                            vscp_convertEventToJSON(str, pEvent);
+                            vscp_convertEventToXML(str, pEvent);
                             break;
 
                         case VSCP_MQTT_FORMAT_JSON:
-                            vscp_convertEventToXML(str, pEvent);
+                            vscp_convertEventToJSON(str, pEvent);
                             break;
                     }
 
                 PUBLISH:
 
+                    // if topic is empty we should build a topic on the form
+                    // prefix + "/vscp/guid/class/type"
+                    cguid guid(pEvent->GUID);
+                    std::string topic = pObj->m_prefix;
+                    if ( pObj->m_topic.length() ) {
+                        topic += pObj->m_topic;
+                    }
+                    else {
+                        topic = vscp_str_format("%s/vscp/%s/%d/%d",
+                        pObj->m_prefix.c_str(),
+                        guid.getAsString().c_str(),
+                        pEvent->vscp_class,
+                        pEvent->vscp_type);
+                    }
+
+                    if (pObj->m_bDebug) {
+                        syslog(LOG_DEBUG,
+                               "[vscpl2drv-mqtt] publising to host %s topic %s [%s]",
+                               pObj->m_host.c_str(),
+                               pObj->m_topic.c_str(),
+                               str.c_str());
+                    }
+
                     if (MOSQ_ERR_SUCCESS !=
                         (rv = mosquitto_publish(mosq,
                                                 NULL,
-                                                pObj->m_topic.c_str(),
+                                                topic.c_str(),
                                                 str.length(),
                                                 str.c_str(),
                                                 pObj->m_qos,
@@ -1575,58 +1646,68 @@ workerThread(void* pData)
 
                             case MOSQ_ERR_INVAL:
                                 syslog(LOG_ERR,
-                                       "[vscpl2drv-mqtt] Input parameters were "
+                                       "[vscpl2drv-mqtt] Input "
+                                       "parameters were "
                                        "invalid.");
                                 pObj->m_bQuit = true;
                                 break;
 
                             case MOSQ_ERR_NOMEM:
                                 syslog(LOG_ERR,
-                                       "[vscpl2drv-mqtt] An out of memory "
+                                       "[vscpl2drv-mqtt] An out of "
+                                       "memory "
                                        "condition occurred.");
                                 pObj->m_bQuit = true;
                                 break;
 
                             case MOSQ_ERR_NO_CONN:
                                 syslog(LOG_ERR,
-                                       "[vscpl2drv-mqtt] The client isn’t "
+                                       "[vscpl2drv-mqtt] The "
+                                       "client isn’t "
                                        "connected to a broker.");
                                 pObj->m_bQuit = true;
                                 break;
 
                             case MOSQ_ERR_PROTOCOL:
                                 syslog(LOG_ERR,
-                                       "[vscpl2drv-mqtt] There is a protocol "
-                                       "error communicating with the broker.");
+                                       "[vscpl2drv-mqtt] There is "
+                                       "a protocol "
+                                       "error communicating with "
+                                       "the broker.");
                                 pObj->m_bQuit = true;
                                 break;
 
                             case MOSQ_ERR_PAYLOAD_SIZE:
                                 syslog(LOG_ERR,
-                                       "[vscpl2drv-mqtt] The payloadlen is too "
+                                       "[vscpl2drv-mqtt] The "
+                                       "payloadlen is too "
                                        "large.");
                                 pObj->m_bQuit = true;
                                 break;
 
                             case MOSQ_ERR_MALFORMED_UTF8:
                                 syslog(LOG_ERR,
-                                       "[vscpl2drv-mqtt] The topic is not "
+                                       "[vscpl2drv-mqtt] The topic "
+                                       "is not "
                                        "valid UTF-8");
                                 pObj->m_bQuit = true;
                                 break;
 
                             case MOSQ_ERR_QOS_NOT_SUPPORTED:
                                 syslog(LOG_ERR,
-                                       "[vscpl2drv-mqtt] The QoS is greater "
-                                       "than that supported by the broker.");
+                                       "[vscpl2drv-mqtt] The QoS "
+                                       "is greater "
+                                       "than that supported by the "
+                                       "broker.");
                                 pObj->m_bQuit = true;
                                 break;
 
                             case MOSQ_ERR_OVERSIZE_PACKET:
-                                syslog(
-                                  LOG_ERR,
-                                  "[vscpl2drv-mqtt] The resulting packet would "
-                                  "be larger than supported by the broker.");
+                                syslog(LOG_ERR,
+                                       "[vscpl2drv-mqtt] The "
+                                       "resulting packet would "
+                                       "be larger than supported "
+                                       "by the broker.");
                                 pObj->m_bQuit = true;
                                 break;
                         }
@@ -1637,10 +1718,43 @@ workerThread(void* pData)
                 vscp_deleteVSCPevent_v2(&pEvent);
 
             } // Event received
+        }     // while bQuit
+    }
+
+    if (MOSQ_ERR_SUCCESS != (rv = mosquitto_disconnect(mosq))) {
+        switch (rv) {
+
+            case MOSQ_ERR_INVAL:
+                syslog(LOG_ERR,
+                       "[vscpl2drv-mqtt] Disconnect. Invalid input "
+                       "parameter.");
+                break;
+
+            case MOSQ_ERR_NO_CONN:
+                syslog(LOG_ERR,
+                       "[vscpl2drv-mqtt] Disconnect. Not connected "
+                       "to a broker.");
+                break;
+        }
+    }
+
+    if (MOSQ_ERR_SUCCESS != (rv = mosquitto_loop_stop(mosq, false))) {
+        switch (rv) {
+
+            case MOSQ_ERR_INVAL:
+                syslog(LOG_ERR,
+                       "[vscpl2drv-mqtt] Stop Loop. Invalid "
+                       "input parameter.");
+                break;
+
+            case MOSQ_ERR_NOT_SUPPORTED:
+                syslog(LOG_ERR,
+                       "[vscpl2drv-mqtt] Stop loop. Tread "
+                       "support not available.");
+                break;
         }
     }
 
     mosquitto_destroy(mosq);
-
     return NULL;
 }
