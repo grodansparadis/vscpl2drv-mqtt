@@ -218,25 +218,25 @@ class Cmqttobj
     uint16_t m_simple_vscpclass;
 
     /// Type for simple channel handling
-    uint16_t m_simple_vscptype;
+    int m_simple_vscptype;
 
     /// Coding for simple channel handling
-    uint8_t m_simple_coding;
+    int m_simple_coding;
 
     /// Unit for simple channel handling
-    uint8_t m_simple_unit;
+    int m_simple_unit;
 
     /// Sensor index for simple channel handling
-    uint8_t m_simple_sensorindex;
+    int m_simple_sensorindex;
 
     /// Event index for simple channel handling
-    uint8_t m_simple_index;
+    int m_simple_index;
 
     /// zone for simple channel handling
-    uint8_t m_simple_zone;
+    int m_simple_zone;
 
     /// Subzone for simple channel handling
-    uint8_t m_simple_subzone;
+    int m_simple_subzone;
 
     /// Receive Filter
     vscpEventFilter m_vscpfilterRx;

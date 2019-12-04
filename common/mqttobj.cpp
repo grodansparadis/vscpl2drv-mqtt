@@ -90,13 +90,13 @@ Cmqttobj::Cmqttobj()
     m_port = 1883;
 
     m_simple_vscpclass = VSCP_CLASS1_MEASUREMENT;
-    m_simple_vscptype = 0;
-    m_simple_coding = 0;
-    m_simple_unit = 0;
-    m_simple_sensorindex = 0;
-    m_simple_index = 0;
-    m_simple_zone = 0;
-    m_simple_subzone = 0;
+    m_simple_vscptype = -1;    // Don't care
+    m_simple_coding = -1;      // Don't care
+    m_simple_unit = -1;        // Don't care
+    m_simple_sensorindex = -1; // Don't care
+    m_simple_index = -1;       // Don't care
+    m_simple_zone = -1;        // Don't care
+    m_simple_subzone = -1;     // Don't care
 
     // Initialize the mqtt library
     mosquitto_lib_init();
@@ -679,14 +679,14 @@ Cmqttobj::handleHLO(vscpEvent* pEvent)
                         "sunrise",
                         "OK",
                         VSCP_REMOTE_VARIABLE_CODE_DATETIME,
-                        vscp_convertToBASE64(getSunriseTime().getISODateTime())
+                        vscp_convertToBase64(getSunriseTime().getISODateTime())
                           .c_str());*/
             } else {
                 sprintf(buf,
                         HLO_READ_VAR_ERR_REPLY_TEMPLATE,
                         hlo.m_name.c_str(),
                         ERR_VARIABLE_UNKNOWN,
-                        vscp_convertToBASE64(std::string("Unknown variable"))
+                        vscp_convertToBase64(std::string("Unknown variable"))
                           .c_str());
             }
             break;
@@ -704,7 +704,7 @@ Cmqttobj::handleHLO(vscpEvent* pEvent)
                         HLO_READ_VAR_ERR_REPLY_TEMPLATE,
                         hlo.m_name.c_str(),
                         1,
-                        vscp_convertToBASE64(std::string("Unknown variable"))
+                        vscp_convertToBase64(std::string("Unknown variable"))
                           .c_str());
             }
             break;
@@ -732,10 +732,10 @@ bool
 Cmqttobj::eventExToReceiveQueue(vscpEventEx& ex)
 {
     vscpEvent* pev = new vscpEvent();
-    if (!vscp_convertVSCPfromEx(pev, &ex)) {
+    if (!vscp_convertEventExToEvent(pev, &ex)) {
         syslog(LOG_ERR,
                "[vscpl2drv-mqtt] Failed to convert event from ex to ev.");
-        vscp_deleteVSCPevent(pev);
+        vscp_deleteEvent(pev);
         return false;
     }
     if (NULL != pev) {
@@ -745,7 +745,7 @@ Cmqttobj::eventExToReceiveQueue(vscpEventEx& ex)
             sem_post(&m_semReceiveQueue);
             pthread_mutex_unlock(&m_mutexReceiveQueue);
         } else {
-            vscp_deleteVSCPevent(pev);
+            vscp_deleteEvent(pev);
         }
     } else {
         syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to allocate event storage.");
@@ -811,7 +811,7 @@ on_connect(struct mosquitto* mosq, void* obj, int rc, int flags)
         syslog(LOG_ERR,
                "[vscpl2drv-mqtt] Unable to add connect event due to memory "
                "problem (data).");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
         return;
     }
 
@@ -829,7 +829,7 @@ on_connect(struct mosquitto* mosq, void* obj, int rc, int flags)
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
         syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
     }
 }
 
@@ -863,7 +863,7 @@ on_disconnect(struct mosquitto* mosq, void* obj, int rc)
         syslog(LOG_ERR,
                "[vscpl2drv-mqtt] Unable to add disconnect event due to memory "
                "problem (data).");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
         return;
     }
 
@@ -881,7 +881,7 @@ on_disconnect(struct mosquitto* mosq, void* obj, int rc)
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
         syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
     }
 }
 
@@ -918,7 +918,7 @@ on_publish(struct mosquitto* mosq, void* obj, int mid)
           LOG_ERR,
           "[vscpl2drv-mqtt] Unable to add publish success event due to memory "
           "problem (data).");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
         return;
     }
 
@@ -937,7 +937,7 @@ on_publish(struct mosquitto* mosq, void* obj, int mid)
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
         syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
     }
 }
 
@@ -975,7 +975,7 @@ on_subscribe(struct mosquitto* mosq,
         syslog(LOG_ERR,
                "[vscpl2drv-mqtt] Unable to add subscribe success event due to "
                "memory problem (data).");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
         return;
     }
 
@@ -994,7 +994,7 @@ on_subscribe(struct mosquitto* mosq,
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
         syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
     }
 }
 
@@ -1031,7 +1031,7 @@ on_unsubscribe(struct mosquitto* mosq, void* obj, int mid)
           LOG_ERR,
           "[vscpl2drv-mqtt] Unable to add unsubscribe success event due to "
           "memory problem (data).");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
         return;
     }
 
@@ -1050,7 +1050,7 @@ on_unsubscribe(struct mosquitto* mosq, void* obj, int mid)
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
         syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add connect event.");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
     }
 }
 
@@ -1086,7 +1086,7 @@ on_message(struct mosquitto* mosq,
     switch (pObj->m_format) {
 
         case VSCP_MQTT_FORMAT_STRING:
-            vscp_setVscpEventFromString(pEvent, str);
+            !vscp_convertStringToEvent(pEvent, str);
             break;
 
         case VSCP_MQTT_FORMAT_XML:
@@ -1101,13 +1101,13 @@ on_message(struct mosquitto* mosq,
             syslog(LOG_ERR,
                    "[vscpl2drv-mqtt] Unable to add incoming event: Unknown "
                    "message format.");
-            vscp_deleteVSCPevent_v2(&pEvent);
+            vscp_deleteEvent_v2(&pEvent);
             return;
     }
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
         syslog(LOG_ERR, "[vscpl2drv-mqtt] Unable to add incoming event.");
-        vscp_deleteVSCPevent_v2(&pEvent);
+        vscp_deleteEvent_v2(&pEvent);
     }
 }
 
@@ -1271,7 +1271,7 @@ workerThread(void* pData)
                            "[vscpl2drv-mqtt] Unable to add "
                            "subscribe heatbeat "
                            "event.");
-                    vscp_deleteVSCPevent_v2(&pEvent);
+                    vscp_deleteEvent_v2(&pEvent);
                 }
             }
 
@@ -1409,7 +1409,7 @@ workerThread(void* pData)
                     syslog(LOG_ERR,
                            "[vscpl2drv-mqtt] Unable to add publish "
                            "heatbeat event.");
-                    vscp_deleteVSCPevent_v2(&pEvent);
+                    vscp_deleteEvent_v2(&pEvent);
                 }
             }
 
@@ -1486,7 +1486,7 @@ workerThread(void* pData)
                 }
 
                 // If simple there must also be data
-                if (pObj->m_bSimplify && vscp_isVSCPMeasurement(pEvent)) {
+                if (pObj->m_bSimplify && !vscp_isMeasurement(pEvent)) {
 
                     // Must be data
                     if ((NULL != pEvent->pdata)) {
@@ -1494,96 +1494,83 @@ workerThread(void* pData)
                                "[vscpl2drv-mqtt] A malformed "
                                "measurement event "
                                "received (no data). Skipping.  ");
-                        vscp_deleteVSCPevent(pEvent);
+                        vscp_deleteEvent(pEvent);
                         continue;
                     }
 
                     // Get measurement value
-                    vscp_getVSCPMeasurementAsString(str, pEvent);
+                    !vscp_getMeasurementAsString(str, pEvent);
 
                     switch (pObj->m_simple_vscpclass) {
 
+                        case VSCP_CLASS2_MEASUREMENT_FLOAT:
                         case VSCP_CLASS2_MEASUREMENT_STR: {
-                            // classes should be the same
-                            if (VSCP_CLASS2_MEASUREMENT_STR !=
-                                pEvent->vscp_class) {
-                                break;
-                            }
 
-                            // There must be at least one
-                            // character in the string
-                            if (pEvent->sizeData < 1) {
-                                break;
-                            }
-
-                            // Sensor index must be the same
-                            if (pObj->m_simple_sensorindex !=
-                                pEvent->pdata[0]) {
-                                break;
-                            }
-
-                            // Zone must be the same
-                            if (pObj->m_simple_zone != pEvent->pdata[1]) {
-                                break;
-                            }
-
-                            // Subzone must be the same
-                            if (pObj->m_simple_zone != pEvent->pdata[2]) {
-                                break;
-                            }
-
-                            // Unit must be the same
-                            if (pObj->m_simple_unit != pEvent->pdata[3]) {
-                                break;
-                            }
-
-                            goto PUBLISH;
-                        } break;
-
-                        case VSCP_CLASS2_MEASUREMENT_FLOAT: {
-                            // There must be place for the
-                            // double in the data 4 + 8
-                            if (pEvent->sizeData < 12) {
-                                break;
+                            // Control block must be there
+                            if (pEvent->sizeData < 4) {
+                                std::string strEvent = vscp_getEventAsString(pEvent);
+                                syslog(LOG_ERR,
+                                       "Measurement event has invalid format "
+                                       "[%s]",
+                                       strEvent.c_str());
+                                vscp_deleteEvent_v2(&pEvent);
+                                continue;
                             }
 
                             // Sensor index must be the same
-                            if (pObj->m_simple_sensorindex !=
-                                pEvent->pdata[0]) {
-                                break;
+                            if ((-1 != pObj->m_simple_sensorindex) &&
+                                (pObj->m_simple_index != pEvent->pdata[0])) {
+                                vscp_deleteEvent_v2(&pEvent);
+                                continue;
                             }
 
                             // Zone must be the same
-                            if (pObj->m_simple_zone != pEvent->pdata[1]) {
-                                break;
+                            if ((-1 != pObj->m_simple_zone) &&
+                                (pObj->m_simple_zone != pEvent->pdata[1])) {
+                                vscp_deleteEvent_v2(&pEvent);
+                                continue;
                             }
 
                             // Subzone must be the same
-                            if (pObj->m_simple_zone != pEvent->pdata[2]) {
-                                break;
+                            if ((-1 != pObj->m_simple_subzone) &&
+                                (pObj->m_simple_zone != pEvent->pdata[2])) {
+                                vscp_deleteEvent_v2(&pEvent);
+                                continue;
                             }
 
                             // Unit must be the same
-                            if (pObj->m_simple_unit != pEvent->pdata[3]) {
-                                break;
+                            if ((-1 != pObj->m_simple_unit) &&
+                                (pObj->m_simple_unit != pEvent->pdata[3])) {
+                                vscp_deleteEvent_v2(&pEvent);
+                                continue;
                             }
 
                             goto PUBLISH;
-
                         } break;
 
                         default:
                         case VSCP_CLASS1_MEASUREMENT: {
+
+                            // Control block must be there
+                            if (0 == pEvent->sizeData) {
+                                vscp_deleteEvent_v2(&pEvent);
+                                continue;
+                            }
+
                             // Sensor index must be the same
-                            if (pObj->m_simple_sensorindex !=
-                                VSCP_DATACODING_INDEX(pEvent->pdata[0])) {
-                                break;
+                            if ((-1 != pObj->m_simple_sensorindex) &&
+                                (pObj->m_simple_sensorindex !=
+                                 VSCP_DATACODING_INDEX(pEvent->pdata[0]))) {
+                                vscp_deleteEvent_v2(&pEvent);
+                                continue;
                             }
 
                             // Unit must be the same
-                            if (pObj->m_simple_unit !=
-                                VSCP_DATACODING_UNIT(pEvent->pdata[0])) {
-                                break;
+                            if ((-1 != pObj->m_simple_sensorindex) &&
+                                (pObj->m_simple_unit !=
+                                 VSCP_DATACODING_UNIT(pEvent->pdata[0]))) {
+                                vscp_deleteEvent_v2(&pEvent);
+                                continue;
                             }
 
                             goto PUBLISH;
@@ -1597,7 +1584,7 @@ workerThread(void* pData)
                     switch (pObj->m_format) {
 
                         case VSCP_MQTT_FORMAT_STRING:
-                            vscp_writeVscpEventToString(str, pEvent);
+                            !vscp_convertEventToString(str, pEvent);
                             break;
 
                         case VSCP_MQTT_FORMAT_XML:
@@ -1615,23 +1602,23 @@ workerThread(void* pData)
                     // prefix + "/vscp/guid/class/type"
                     cguid guid(pEvent->GUID);
                     std::string topic = pObj->m_prefix;
-                    if ( pObj->m_topic.length() ) {
+                    if (pObj->m_topic.length()) {
                         topic += pObj->m_topic;
-                    }
-                    else {
+                    } else {
                         topic = vscp_str_format("%s/vscp/%s/%d/%d",
-                        pObj->m_prefix.c_str(),
-                        guid.getAsString().c_str(),
-                        pEvent->vscp_class,
-                        pEvent->vscp_type);
+                                                pObj->m_prefix.c_str(),
+                                                guid.getAsString().c_str(),
+                                                pEvent->vscp_class,
+                                                pEvent->vscp_type);
                     }
 
                     if (pObj->m_bDebug) {
-                        syslog(LOG_DEBUG,
-                               "[vscpl2drv-mqtt] publising to host %s topic %s [%s]",
-                               pObj->m_host.c_str(),
-                               pObj->m_topic.c_str(),
-                               str.c_str());
+                        syslog(
+                          LOG_DEBUG,
+                          "[vscpl2drv-mqtt] publising to host %s topic %s [%s]",
+                          pObj->m_host.c_str(),
+                          pObj->m_topic.c_str(),
+                          str.c_str());
                     }
 
                     if (MOSQ_ERR_SUCCESS !=
@@ -1715,10 +1702,10 @@ workerThread(void* pData)
                 }
 
                 // We are done with the event
-                vscp_deleteVSCPevent_v2(&pEvent);
+                vscp_deleteEvent_v2(&pEvent);
 
             } // Event received
-        }     // while bQuit
+        }     // while not bQuit
     }
 
     if (MOSQ_ERR_SUCCESS != (rv = mosquitto_disconnect(mosq))) {
