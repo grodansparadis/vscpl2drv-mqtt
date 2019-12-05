@@ -164,6 +164,19 @@ This is the username needed to connect to the remote mqtt broker. If left empty 
 #### remote-password
 This is the password needed to connect to the remote mqtt broker.
 
+#### cafile
+path to a file containing the PEM encoded trusted CA certificate files.  Either cafile or capath must not be NULL.
+            
+#### capath
+path to a directory containing the PEM encoded trusted CA certificate files.  See mosquitto.conf for more details on configuring this directory.  Either cafile or capath must not be NULL.
+            
+#### certfile
+path to a file containing the PEM encoded certificate file for this client.  If NULL, keyfile must also be NULL and no client certificate will be used.
+            
+#### keyfile
+path to a file containing the PEM encoded private key for this client.  If NULL, certfile must also be NULL and no client certificate will be used.
+
+
 ### simple
 The _simple_ tag is used to configure parameters for the simple connection mode of the driver which can be used for VSCP measurement events. All other event types will be ignored when enabled. 
 
@@ -261,6 +274,8 @@ tbd
  | **_filter**    | string  | Standard VSCP filter in string form. 1,0x0000,0x0006,ff:ff:ff:ff:ff:ff:ff:01:00:00:00:00:00:00:00:00 as priority,class,type,GUID Used to filter what events that is received from the socketcan interface. If not give all events are received/sent. |
  | **_mask**      | string  | Standard VSCP mask in string form. 1,0x0000,0x0006,ff:ff:ff:ff:ff:ff:ff:01:00:00:00:00:00:00:00:00 as priority,class,type,GUID Used to filter what events that is received from the socketcan interface. If not give all events are received/sent.   |
  | **_simplify**  | string  | Makes it possible to publish and subscribe data in a human handleable form. See below for more information.  |
+
+
 
  The full variable name is built from the name you give the driver (prefix before _variablename) in vscpd.conf. So in the examples below the driver have the name **mqtt1** and the full variable name for the **_sessionid** will thus be
 

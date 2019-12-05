@@ -39,8 +39,8 @@
 #include <canal.h>
 #include <canal_macro.h>
 #include <guid.h>
-#include <vscp.h>
 #include <hlo.h>
+#include <vscp.h>
 #include <vscpremotetcpif.h>
 
 // Forward declarations
@@ -56,6 +56,7 @@ class CWrkThreadObj;
 #define VSCP_MQTT_FORMAT_STRING 0
 #define VSCP_MQTT_FORMAT_XML 1
 #define VSCP_MQTT_FORMAT_JSON 2
+#define VSCP_MQTT_FORMAT_ENCRYPTED 3
 
 #define ERROR_CODE_SUCCESS_PUBLISH 0
 #define ERROR_CODE_SUCCESS_SUBSCRIBE 1
@@ -119,8 +120,7 @@ class Cmqttobj
         @param phlo Pointer to HLO that will get parsed data
         @return true on successfull parsing, false otherwise
     */
-    bool
-    parseHLO(uint16_t size, uint8_t* inbuf, CHLO* phlo);
+    bool parseHLO(uint16_t size, uint8_t* inbuf, CHLO* phlo);
 
     /*!
         Handle HLO commands sent to this driver
@@ -137,7 +137,7 @@ class Cmqttobj
         @param ex Event to send
         @return true on success, false on failure
     */
-    bool eventExToReceiveQueue(vscpEventEx &ex);
+    bool eventExToReceiveQueue(vscpEventEx& ex);
 
   public:
     /// Run flag
@@ -234,6 +234,25 @@ class Cmqttobj
 
     /// Subzone for simple channel handling
     int m_simple_subzone;
+
+    /// path to a file containing the PEM encoded trusted CA certificate files.
+    /// Either cafile or capath must not be NULL.
+    std::string m_cafile;
+
+    /// path to a directory containing the PEM encoded trusted CA certificate
+    /// files.  See mosquitto.conf for more details on configuring this
+    /// directory.  Either cafile or capath must not be NULL.
+    std::string m_capath;
+
+    /// path to a file containing the PEM encoded certificate file for this
+    /// client.  If NULL, keyfile must also be NULL and no client certificate
+    /// will be used.
+    std::string m_certfile;
+
+    /// path to a file containing the PEM encoded private key for this client.
+    /// If NULL, certfile must also be NULL and no client certificate will be
+    /// used.
+    std::string m_keyfile;
 
     /// Receive Filter
     vscpEventFilter m_vscpfilterRx;

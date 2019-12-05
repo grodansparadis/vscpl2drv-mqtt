@@ -153,6 +153,15 @@ Cmqttobj::~Cmqttobj()
             remote-port=""
             remote-user=""
             remote-password=""
+            cafile="path to a file containing the PEM encoded trusted CA
+   certificate files.  Either cafile or capath must not be NULL." capath="path
+   to a directory containing the PEM encoded trusted CA certificate files.  See
+   mosquitto.conf for more details on configuring this directory.  Either cafile
+   or capath must not be NULL." certfile="path to a file containing the PEM
+   encoded certificate file for this client.  If NULL, keyfile must also be NULL
+   and no client certificate will be used." keyfile="path to a file containing
+   the PEM encoded private key for this client.  If NULL, certfile must also be
+   NULL and no client certificate will be used."
 
         <simple enable="true|false"
                     vscpclass=""
@@ -945,7 +954,7 @@ on_publish(struct mosquitto* mosq, void* obj, int mid)
         return;
     }
 
-    pEvent->pdata = new uint8_t[3];
+    pEvent->pdata = new uint8_t[4];
     if (NULL == pEvent->pdata) {
         syslog(
           LOG_ERR,
@@ -1003,7 +1012,7 @@ on_subscribe(struct mosquitto* mosq,
         return;
     }
 
-    pEvent->pdata = new uint8_t[3];
+    pEvent->pdata = new uint8_t[4];
     if (NULL == pEvent->pdata) {
         syslog(LOG_ERR,
                "[vscpl2drv-mqtt] Unable to add subscribe success event due to "
@@ -1058,7 +1067,7 @@ on_unsubscribe(struct mosquitto* mosq, void* obj, int mid)
         return;
     }
 
-    pEvent->pdata = new uint8_t[3];
+    pEvent->pdata = new uint8_t[4];
     if (NULL == pEvent->pdata) {
         syslog(
           LOG_ERR,
@@ -1125,7 +1134,176 @@ on_message(struct mosquitto* mosq,
     }
 
     if (pObj->m_bSimplify) {
-        
+
+        int offset = 0;
+        uint16_t size;
+        double value = std::stod(strMsg);
+        uint8_t buf[VSCP_MAX_DATA];
+
+        pEvent->head = VSCP_HEADER16_DUMB;
+        pEvent->obid = 0;
+        pEvent->timestamp = 0; // Let i&f set timestamp
+        vscp_setEventToNow(pEvent);
+        pObj->m_guid.writeGUID(pEvent->GUID);
+        pEvent->vscp_class = pObj->m_simple_vscpclass;
+        pEvent->vscp_type = pObj->m_simple_vscptype;
+
+        switch (pObj->m_simple_vscpclass) {
+
+            case VSCP_CLASS1_MEASUREMENT:
+            case VSCP_CLASS1_DATA:
+                if (!vscp_convertFloatToNormalizedEventData(
+                      buf,
+                      &size,
+                      value,
+                      pObj->m_simple_unit,
+                      pObj->m_simple_sensorindex)) {
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] Failed to make event from measurement "
+                      "value topic=%s [%s].",
+                      strTopic.c_str(),
+                      strMsg.c_str());
+                    vscp_deleteEvent_v2(&pEvent);
+                    return;
+                }
+
+                // Allocate data space
+                pEvent->sizeData = size;
+                pEvent->pdata = new uint8_t[size];
+                if (NULL == pEvent->pdata) {
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] Unable to create data space due to "
+                      "memory problem (data).");
+                    vscp_deleteEvent_v2(&pEvent);
+                    return;
+                }
+
+                memcpy(pEvent->pdata, buf, size);
+                break;
+
+            case VSCP_CLASS1_MEASUREMENT32:
+            case VSCP_CLASS1_MEASUREMENT64:
+                offset = 0;
+                if (!vscp_convertFloatToNormalizedEventData(
+                      buf,
+                      &size,
+                      value,
+                      pObj->m_simple_unit,
+                      pObj->m_simple_sensorindex)) {
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] Failed to make event from measurement "
+                      "value topic=%s [%s].",
+                      strTopic.c_str(),
+                      strMsg.c_str());
+                    vscp_deleteEvent_v2(&pEvent);
+                    return;
+                }
+
+                // Allocate data space
+                pEvent->sizeData = size;
+                pEvent->pdata = new uint8_t[size];
+                if (NULL == pEvent->pdata) {
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] Unable to create data space due to "
+                      "memory problem (data).");
+                    vscp_deleteEvent_v2(&pEvent);
+                    return;
+                }
+
+                memcpy(pEvent->pdata, buf, size);
+                break;
+
+            case VSCP_CLASS1_MEASUREZONE:
+            case VSCP_CLASS1_SETVALUEZONE:
+                if (!vscp_convertFloatToNormalizedEventData(
+                      buf + 3,
+                      &size,
+                      value,
+                      pObj->m_simple_unit,
+                      pObj->m_simple_sensorindex)) {
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] Failed to make event from measurement "
+                      "value topic=%s [%s].",
+                      strTopic.c_str(),
+                      strMsg.c_str());
+                    vscp_deleteEvent_v2(&pEvent);
+                    return;
+                }
+
+                buf[0] = pObj->m_simple_index;
+                buf[1] = pObj->m_simple_zone;
+                buf[2] = pObj->m_simple_subzone;
+
+                // Allocate data space
+                pEvent->pdata = new uint8_t[size + offset];
+                if (NULL == pEvent->pdata) {
+                    syslog(
+                      LOG_ERR,
+                      "[vscpl2drv-mqtt] Unable to create data space due to "
+                      "memory problem (data).");
+                    vscp_deleteEvent_v2(&pEvent);
+                    return;
+                }
+
+                memcpy(pEvent->pdata, buf, size + offset);
+                break;
+
+            case VSCP_CLASS2_MEASUREMENT_STR:
+                if (!vscp_makeLevel2StringMeasurementEvent(
+                      pEvent,
+                      pEvent->vscp_type,
+                      value,
+                      pObj->m_simple_unit,
+                      pObj->m_simple_sensorindex,
+                      pObj->m_simple_zone,
+                      pObj->m_simple_subzone)) {
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Failed to make level II string "
+                           "event from measurement "
+                           "value topic=%s [%s].",
+                           strTopic.c_str(),
+                           strMsg.c_str());
+                    vscp_deleteEvent_v2(&pEvent);
+                    return;
+                }
+                break;
+
+            case VSCP_CLASS2_MEASUREMENT_FLOAT:
+                if (!vscp_makeLevel2FloatMeasurementEvent(
+                      pEvent,
+                      pEvent->vscp_type,
+                      value,
+                      pObj->m_simple_unit,
+                      pObj->m_simple_sensorindex,
+                      pObj->m_simple_zone,
+                      pObj->m_simple_subzone)) {
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Failed to make level II float "
+                           "event from measurement "
+                           "value topic=%s [%s].",
+                           strTopic.c_str(),
+                           strMsg.c_str());
+                    vscp_deleteEvent_v2(&pEvent);
+                    return;
+                }
+                break;
+
+            default:
+                syslog(LOG_ERR,
+                       "[vscpl2drv-mqtt] Non supported simple measurement "
+                       "event %d topic=%s [%s].",
+                       pObj->m_simple_vscpclass,
+                       strTopic.c_str(),
+                       strMsg.c_str());
+                vscp_deleteEvent_v2(&pEvent);
+                return;
+        }
+
     } else {
         switch (pObj->m_format) {
 

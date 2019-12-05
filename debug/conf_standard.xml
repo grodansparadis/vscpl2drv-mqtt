@@ -17,13 +17,13 @@
             remote-user=""
             remote-password=""
             keepalive="0" >
-        <simple enable="false"
+        <simple enable="true"
                     vscpclass="10"
                     vscptype="6"
-                    coding="-1"
-                    unit="-1"
-                    sensorindex="-1"
-                    index="-1"
-                    zone="-1"
-                    subzone="-1" />
+                    coding="0"
+                    unit="1"
+                    sensorindex="1"
+                    index="1"
+                    zone="1"
+                    subzone="1" />
     </config>
