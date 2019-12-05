@@ -332,14 +332,47 @@ startSetupParser(void* data, const char* name, const char** attr)
             std::string attribute = attr[i + 1];
             vscp_trim(attribute);
 
-            if (0 == strcasecmp(attr[i], "debug")) {
+            if (0 == strcasecmp(attr[i], "enable")) {
                 if (!attribute.empty()) {
                     vscp_makeUpper(attribute);
                     if (std::string::npos != attribute.find("TRUE")) {
-                        pObj->m_bDebug = true;
+                        pObj->m_bSimplify = true;
                     } else {
-                        pObj->m_bDebug = false;
+                        pObj->m_bSimplify = false;
                     }
+                }
+            } else if (0 == strcasecmp(attr[i], "vscpclass")) {
+                if (!attribute.empty()) {
+                    pObj->m_simple_vscpclass = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "vscptype")) {
+                if (!attribute.empty()) {
+                    pObj->m_simple_vscptype = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "coding")) {
+                if (!attribute.empty()) {
+                    pObj->m_simple_coding = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "unit")) {
+                if (!attribute.empty()) {
+                    pObj->m_simple_unit = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "sensorindex")) {
+                if (!attribute.empty()) {
+                    pObj->m_simple_sensorindex =
+                      vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "index")) {
+                if (!attribute.empty()) {
+                    pObj->m_simple_index = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "zone")) {
+                if (!attribute.empty()) {
+                    pObj->m_simple_zone = vscp_readStringValue(attribute);
+                }
+            } else if (0 == strcasecmp(attr[i], "subzone")) {
+                if (!attribute.empty()) {
+                    pObj->m_simple_subzone = vscp_readStringValue(attribute);
                 }
             }
         }
@@ -392,12 +425,6 @@ Cmqttobj::open(std::string& pathcfg, cguid& guid)
                 return false;
                 break;
         }
-    }
-
-    if (m_bSubscribe) {
-        ;
-    } else {
-        ;
     }
 
     // start the workerthread
@@ -840,6 +867,12 @@ on_connect(struct mosquitto* mosq, void* obj, int rc, int flags)
 void
 on_disconnect(struct mosquitto* mosq, void* obj, int rc)
 {
+    if (0 == rc) {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Client disconnect.");
+    } else {
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Unexpected disconnect. [rc=%d]", rc);
+    }
+
     // We have a connect with a remote server
     if (NULL == obj) {
         syslog(LOG_ERR,
@@ -1063,7 +1096,8 @@ on_message(struct mosquitto* mosq,
            void* obj,
            const struct mosquitto_message* message)
 {
-    std::string str;
+    std::string strMsg((const char*)message->payload, message->payloadlen);
+    std::string strTopic = message->topic;
 
     // We have a connect with a remote server
     if (NULL == obj) {
@@ -1083,26 +1117,55 @@ on_message(struct mosquitto* mosq,
         return;
     }
 
-    switch (pObj->m_format) {
+    if (pObj->m_bDebug) {
+        syslog(LOG_ERR,
+               "[vscpl2drv-mqtt] Event received topic=%s [%s].",
+               strTopic.c_str(),
+               strMsg.c_str());
+    }
 
-        case VSCP_MQTT_FORMAT_STRING:
-            !vscp_convertStringToEvent(pEvent, str);
-            break;
+    if (pObj->m_bSimplify) {
+        
+    } else {
+        switch (pObj->m_format) {
 
-        case VSCP_MQTT_FORMAT_XML:
-            vscp_convertJSONToEvent(pEvent, str);
-            break;
+            case VSCP_MQTT_FORMAT_STRING:
+                if (!vscp_convertStringToEvent(pEvent, strMsg)) {
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Failed to convert event on string "
+                           "form [%s].",
+                           strMsg.c_str());
+                    return;
+                }
+                break;
 
-        case VSCP_MQTT_FORMAT_JSON:
-            vscp_convertJSONToEvent(pEvent, str);
-            break;
+            case VSCP_MQTT_FORMAT_XML:
+                if (!vscp_convertXMLToEvent(pEvent, strMsg)) {
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Failed to convert event on XML "
+                           "form [%s].",
+                           strMsg.c_str());
+                    return;
+                }
+                break;
 
-        default:
-            syslog(LOG_ERR,
-                   "[vscpl2drv-mqtt] Unable to add incoming event: Unknown "
-                   "message format.");
-            vscp_deleteEvent_v2(&pEvent);
-            return;
+            case VSCP_MQTT_FORMAT_JSON:
+                if (!vscp_convertJSONToEvent(pEvent, strMsg)) {
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Failed to convert event on JSON "
+                           "form [%s].",
+                           strMsg.c_str());
+                    return;
+                }
+                break;
+
+            default:
+                syslog(LOG_ERR,
+                       "[vscpl2drv-mqtt] Unable to add incoming event: Unknown "
+                       "message format.");
+                vscp_deleteEvent_v2(&pEvent);
+                return;
+        }
     }
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
@@ -1197,13 +1260,17 @@ workerThread(void* pData)
         }
     }
 
-    if (pObj->m_bSubscribe) {
+    if (VSCP_MQTT_TYPE_SUBSCRIBE == pObj->m_type) {
 
         // * * * subscribe * * *
 
-        if (MOSQ_ERR_SUCCESS !=
-            (rv = mosquitto_subscribe(
-               mosq, NULL, pObj->m_topic.c_str(), pObj->m_qos))) {
+        std::string topic = pObj->m_prefix + pObj->m_topic;
+        if (!topic.length()) {
+            topic = "/vscp/#";
+        }
+
+        if (MOSQ_ERR_SUCCESS != (rv = mosquitto_subscribe(
+                                   mosq, NULL, topic.c_str(), pObj->m_qos))) {
 
             switch (rv) {
                 case MOSQ_ERR_INVAL:
@@ -1261,6 +1328,14 @@ workerThread(void* pData)
                 pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
                 pEvent->vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
                 pEvent->sizeData = 3;
+                pEvent->pdata = new uint8_t[3];
+                if (NULL == pEvent->pdata) {
+                    syslog(LOG_ERR,
+                           "[vscpl2drv-mqtt] Out of memory problem when "
+                           "sending heartbeat.");
+                    pObj->m_bQuit = true;
+                    continue;
+                }
                 pEvent->pdata[0] = pObj->m_index;
                 pEvent->pdata[1] = pObj->m_zone;
                 pEvent->pdata[2] = pObj->m_subzone;
@@ -1324,8 +1399,8 @@ workerThread(void* pData)
                         pObj->m_bQuit = true;
                         break;
                 }
-            }
-        }
+            } // mosquito loop
+        }     // while
 
         if (MOSQ_ERR_SUCCESS !=
             (rv = mosquitto_unsubscribe(mosq, NULL, pObj->m_topic.c_str()))) {
@@ -1478,6 +1553,13 @@ workerThread(void* pData)
                 pObj->m_sendList.pop_front();
                 pthread_mutex_unlock(&pObj->m_mutexSendQueue);
 
+                if (pObj->m_bDebug) {
+                    std::string strEvent = vscp_getEventAsString(pEvent);
+                    syslog(LOG_DEBUG,
+                           "Event received to publish [%s]",
+                           strEvent.c_str());
+                }
+
                 if (NULL == pEvent) {
                     syslog(LOG_ERR,
                            "[vscpl2drv-mqtt] A null event "
@@ -1486,10 +1568,10 @@ workerThread(void* pData)
                 }
 
                 // If simple there must also be data
-                if (pObj->m_bSimplify && !vscp_isMeasurement(pEvent)) {
+                if (pObj->m_bSimplify && vscp_isMeasurement(pEvent)) {
 
                     // Must be data
-                    if ((NULL != pEvent->pdata)) {
+                    if ((NULL == pEvent->pdata)) {
                         syslog(LOG_ERR,
                                "[vscpl2drv-mqtt] A malformed "
                                "measurement event "
@@ -1499,7 +1581,7 @@ workerThread(void* pData)
                     }
 
                     // Get measurement value
-                    !vscp_getMeasurementAsString(str, pEvent);
+                    vscp_getMeasurementAsString(str, pEvent);
 
                     switch (pObj->m_simple_vscpclass) {
 
@@ -1508,7 +1590,8 @@ workerThread(void* pData)
 
                             // Control block must be there
                             if (pEvent->sizeData < 4) {
-                                std::string strEvent = vscp_getEventAsString(pEvent);
+                                std::string strEvent =
+                                  vscp_getEventAsString(pEvent);
                                 syslog(LOG_ERR,
                                        "Measurement event has invalid format "
                                        "[%s]",
@@ -1566,7 +1649,7 @@ workerThread(void* pData)
                             }
 
                             // Unit must be the same
-                            if ((-1 != pObj->m_simple_sensorindex) &&
+                            if ((-1 != pObj->m_simple_unit) &&
                                 (pObj->m_simple_unit !=
                                  VSCP_DATACODING_UNIT(pEvent->pdata[0]))) {
                                 vscp_deleteEvent_v2(&pEvent);
@@ -1579,7 +1662,7 @@ workerThread(void* pData)
 
                     } // switch
 
-                } else { // Not measurement and simplify
+                } else if (!pObj->m_bSimplify) { // Not measurement and simplify
 
                     switch (pObj->m_format) {
 
@@ -1594,6 +1677,17 @@ workerThread(void* pData)
                         case VSCP_MQTT_FORMAT_JSON:
                             vscp_convertEventToJSON(str, pEvent);
                             break;
+
+                        default:
+                            std::string strEvent =
+                              vscp_getEventAsString(pEvent);
+                            syslog(LOG_ERR,
+                                   "Invalid format %d"
+                                   "[%s]",
+                                   pObj->m_format,
+                                   strEvent.c_str());
+                            vscp_deleteEvent_v2(&pEvent);
+                            continue;
                     }
 
                 PUBLISH:

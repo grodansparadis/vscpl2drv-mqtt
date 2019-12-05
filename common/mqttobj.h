@@ -200,9 +200,6 @@ class Cmqttobj
     // Keepalive value
     int m_keepalive;
 
-    /// True if subscribe / False if publish
-    bool m_bSubscribe;
-
     // Quality Of Service
     uint8_t m_qos;
 
