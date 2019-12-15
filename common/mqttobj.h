@@ -255,7 +255,13 @@ class Cmqttobj
     std::string m_keyfile;
 
     /// Enable encryption
-    bool bEnableEncryption;
+    bool m_bEncrypt;
+
+    /// Path to encrypt key (must be stored in safe place)
+    std::string m_path_EncryptKey;
+
+    /// This is the encryption key in HEX format
+    std::string m_encryptKey;
 
     /// Receive Filter
     vscpEventFilter m_vscpfilterRx;

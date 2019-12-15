@@ -80,12 +80,12 @@ Cmqttobj::Cmqttobj()
     m_subzone = 0;
 
     m_sessionid = "";
-    m_keepalive =
-      60; // 0 = Don't keep alive, n = seconds to wait before reconnect
+    m_keepalive = 60; // 0 = Don't keep alive,
+                      // n = seconds to wait before reconnect
     m_qos = 0;
 
     // Encryption is disabled by default
-    bEnableEncryption = false;
+    m_bEncrypt = false;
 
     // Simple
     m_bSimplify = false;
@@ -143,7 +143,10 @@ Cmqttobj::~Cmqttobj()
     <config debug="true|false"
             access="rw"
             keepalive="60"
-            bencrypt="true|false"
+
+            encrypt="true|false"
+            path-encrypt-key="path to encrypt key"
+
             filter="incoming-filter"
             mask="incoming-mask"
             index="index identifying this driver"
@@ -160,14 +163,16 @@ Cmqttobj::~Cmqttobj()
             remote-password=""
             
             cafile="path to a file containing the PEM encoded trusted CA
-               certificate files.  Either cafile or capath should be NULL."
+                    certificate files.  Either cafile or capath should be NULL."
             capath="path to a directory containing the PEM encoded trusted CA certificate
-               files. Either cafile or capath should be NULL." 
+                    files. Either cafile or capath should be NULL." 
             certfile="path to a file containing the PEM encoded certificate file for this 
-               client.  If NULL, keyfile must also be NULL and no client certificate will be used."
+                      client.  If NULL, keyfile must also be NULL and no client certificate 
+                      will be used."
             keyfile="path to a file containing
-               the PEM encoded private key for this client.  If NULL, certfile
-               must also be NULL and no client certificate will be used." 
+                     the PEM encoded private key for this client.  If NULL, certfile
+                     must also be NULL and no client certificate will be used." 
+
             <simple
                 enable="true|false" 
                 vscpclass="" 
@@ -238,11 +243,24 @@ startSetupParser(void* data, const char* name, const char** attr)
                     pObj->m_qos = vscp_readStringValue(attribute);
                     if (pObj->m_qos > 2) {
                         syslog(LOG_ERR,
-                               "[vscpl2drv-mqtt]  Invalid QoS value [%d] - "
+                               "[vscpl2drv-mqtt] Invalid QoS value [%d] - "
                                "Set to zero.",
                                pObj->m_qos);
                         pObj->m_qos = 0;
                     }
+                }
+            } else if (0 == strcasecmp(attr[i], "encrypt")) {
+                if (!attribute.empty()) {
+                    vscp_makeUpper(attribute);
+                    if (std::string::npos != attribute.find("TRUE")) {
+                        pObj->m_bEncrypt = true;
+                    } else {
+                        pObj->m_bEncrypt = false;
+                    }
+                }
+            } else if (0 == strcasecmp(attr[i], "path-encrypt-key")) {
+                if (!attribute.empty()) {
+                    pObj->m_path_EncryptKey = attribute;
                 }
             } else if (0 == strcasecmp(attr[i], "index")) {
                 if (!attribute.empty()) {
@@ -339,6 +357,22 @@ startSetupParser(void* data, const char* name, const char** attr)
                 if (!attribute.empty()) {
                     pObj->m_password = attribute;
                 }
+            } else if (0 == strcasecmp(attr[i], "cafile")) {
+                if (!attribute.empty()) {
+                    pObj->m_cafile = attribute;
+                }
+            } else if (0 == strcasecmp(attr[i], "capath")) {
+                if (!attribute.empty()) {
+                    pObj->m_capath = attribute;
+                }
+            } else if (0 == strcasecmp(attr[i], "certfile")) {
+                if (!attribute.empty()) {
+                    pObj->m_certfile = attribute;
+                }
+            } else if (0 == strcasecmp(attr[i], "keyfile")) {
+                if (!attribute.empty()) {
+                    pObj->m_keyfile = attribute;
+                }
             }
         }
     } else if ((0 == strcmp(name, "simple")) && (1 == depth_setup_parser)) {
@@ -422,6 +456,38 @@ Cmqttobj::open(std::string& pathcfg, cguid& guid)
         syslog(LOG_ERR,
                "[vscpl2drv-mqtt] Failed to load configuration file [%s]",
                m_path.c_str());
+    }
+
+    // If encryption is enabled we must load the encryption key
+    if (m_bEncrypt) {
+
+        FILE* fp;
+
+        fp = fopen(m_path_EncryptKey.c_str(), "r");
+        if (NULL == fp) {
+            syslog(LOG_ERR,
+                   "[vscpl2drv-mqtt] Failed to open encryption key file [%s] "
+                   "(check read rights)",
+                   m_path_EncryptKey.c_str());
+            return false;
+        }
+
+        char buf[2048];
+        size_t file_size = 0;
+        file_size        = fread(buf, sizeof(char), sizeof(buf), fp);
+
+        if (0 == file_size) {
+            syslog(
+              LOG_ERR,
+              "[vscpl2drv-mqtt] Could not read encryption key from file [%s]",
+              m_path_EncryptKey.c_str());
+            fclose(fp);
+            return false;
+        }
+
+        m_encryptKey = std::string(buf, file_size);
+
+        fclose(fp);
     }
 
     int rv;
@@ -518,6 +584,7 @@ Cmqttobj::doLoadConfig(void)
 
     size_t file_size = 0;
     file_size        = fread(buf, sizeof(char), XML_BUFF_SIZE, fp);
+    fclose(fp);
 
     if (XML_STATUS_OK !=
         XML_ParseBuffer(xmlParser, file_size, file_size == 0)) {
