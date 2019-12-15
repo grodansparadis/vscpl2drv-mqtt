@@ -67,16 +67,16 @@ workerThread(void* pData);
 
 Cmqttobj::Cmqttobj()
 {
-    m_bRead = false;
-    m_bWrite = false;
-    m_bQuit = false;
+    m_bRead      = false;
+    m_bWrite     = false;
+    m_bQuit      = false;
     m_bConnected = false;
-    m_type = VSCP_MQTT_TYPE_UNKNOWN;
-    m_format = VSCP_MQTT_FORMAT_STRING;
+    m_type       = VSCP_MQTT_TYPE_UNKNOWN;
+    m_format     = VSCP_MQTT_FORMAT_STRING;
 
     // Params identifying this node
-    m_index = 0;
-    m_zone = 0;
+    m_index   = 0;
+    m_zone    = 0;
     m_subzone = 0;
 
     m_sessionid = "";
@@ -84,19 +84,22 @@ Cmqttobj::Cmqttobj()
       60; // 0 = Don't keep alive, n = seconds to wait before reconnect
     m_qos = 0;
 
+    // Encryption is disabled by default
+    bEnableEncryption = false;
+
     // Simple
     m_bSimplify = false;
-    m_host = "127.0.0.1";
-    m_port = 1883;
+    m_host      = "127.0.0.1";
+    m_port      = 1883;
 
-    m_simple_vscpclass = VSCP_CLASS1_MEASUREMENT;
-    m_simple_vscptype = -1;    // Don't care
-    m_simple_coding = -1;      // Don't care
-    m_simple_unit = -1;        // Don't care
+    m_simple_vscpclass   = VSCP_CLASS1_MEASUREMENT;
+    m_simple_vscptype    = -1; // Don't care
+    m_simple_coding      = -1; // Don't care
+    m_simple_unit        = -1; // Don't care
     m_simple_sensorindex = -1; // Don't care
-    m_simple_index = -1;       // Don't care
-    m_simple_zone = -1;        // Don't care
-    m_simple_subzone = -1;     // Don't care
+    m_simple_index       = -1; // Don't care
+    m_simple_zone        = -1; // Don't care
+    m_simple_subzone     = -1; // Don't care
 
     // Initialize the mqtt library
     mosquitto_lib_init();
@@ -130,6 +133,7 @@ Cmqttobj::~Cmqttobj()
 
 // ----------------------------------------------------------------------------
 
+/* clang-format off */
 /*
     XML Setup
     =========
@@ -138,7 +142,8 @@ Cmqttobj::~Cmqttobj()
     <!-- Version 0.0.1    2019-11-29   -->
     <config debug="true|false"
             access="rw"
-            keepalive="true|false"
+            keepalive="60"
+            bencrypt="true|false"
             filter="incoming-filter"
             mask="incoming-mask"
             index="index identifying this driver"
@@ -153,25 +158,25 @@ Cmqttobj::~Cmqttobj()
             remote-port=""
             remote-user=""
             remote-password=""
+            
             cafile="path to a file containing the PEM encoded trusted CA
-   certificate files.  Either cafile or capath must not be NULL." capath="path
-   to a directory containing the PEM encoded trusted CA certificate files.  See
-   mosquitto.conf for more details on configuring this directory.  Either cafile
-   or capath must not be NULL." certfile="path to a file containing the PEM
-   encoded certificate file for this client.  If NULL, keyfile must also be NULL
-   and no client certificate will be used." keyfile="path to a file containing
-   the PEM encoded private key for this client.  If NULL, certfile must also be
-   NULL and no client certificate will be used."
-
-        <simple enable="true|false"
-                    vscpclass=""
-                    vscptype=""
-                    coding=""
-                    unit=""
-                    sensoridenx=""
-                    index=""
-                    zone=""
-                    subzone="" />
+               certificate files.  Either cafile or capath should be NULL."
+            capath="path to a directory containing the PEM encoded trusted CA certificate
+               files. Either cafile or capath should be NULL." 
+            certfile="path to a file containing the PEM encoded certificate file for this 
+               client.  If NULL, keyfile must also be NULL and no client certificate will be used."
+            keyfile="path to a file containing
+               the PEM encoded private key for this client.  If NULL, certfile
+               must also be NULL and no client certificate will be used." 
+            <simple
+                enable="true|false" 
+                vscpclass="" 
+                vscptype="" 
+                coding="" 
+                unit="" sensoridenx=""
+                index=""
+                zone=""
+                subzone="" />
     </config>
     "topic" is optional.
     Publish default to "/vscp/class/type/guid",
@@ -181,6 +186,7 @@ Cmqttobj::~Cmqttobj()
     topic or a set topic.
 
 */
+/* clang-format on */
 
 // ----------------------------------------------------------------------------
 
@@ -511,7 +517,7 @@ Cmqttobj::doLoadConfig(void)
     void* buf = XML_GetBuffer(xmlParser, XML_BUFF_SIZE);
 
     size_t file_size = 0;
-    file_size = fread(buf, sizeof(char), XML_BUFF_SIZE, fp);
+    file_size        = fread(buf, sizeof(char), XML_BUFF_SIZE, fp);
 
     if (XML_STATUS_OK !=
         XML_ParseBuffer(xmlParser, file_size, file_size == 0)) {
@@ -683,12 +689,12 @@ Cmqttobj::handleHLO(vscpEvent* pEvent)
         return false;
     }
 
-    ex.obid = 0;
-    ex.head = 0;
+    ex.obid      = 0;
+    ex.head      = 0;
     ex.timestamp = vscp_makeTimeStamp();
     vscp_setEventExToNow(&ex); // Set time to current time
     ex.vscp_class = VSCP_CLASS2_PROTOCOL;
-    ex.vscp_type = VSCP2_TYPE_PROTOCOL_HIGH_LEVEL_OBJECT;
+    ex.vscp_type  = VSCP2_TYPE_PROTOCOL_HIGH_LEVEL_OBJECT;
     m_guid.writeGUID(ex.GUID);
 
     switch (hlo.m_op) {
@@ -851,16 +857,16 @@ on_connect(struct mosquitto* mosq, void* obj, int rc, int flags)
         return;
     }
 
-    pEvent->head = VSCP_HEADER16_DUMB;
-    pEvent->obid = 0;
+    pEvent->head      = VSCP_HEADER16_DUMB;
+    pEvent->obid      = 0;
     pEvent->timestamp = 0; // Let i&f set timestamp
     vscp_setEventToNow(pEvent);
     pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
-    pEvent->vscp_type = VSCP_TYPE_INFORMATION_CONNECT;
-    pEvent->sizeData = 3;
-    pEvent->pdata[0] = pObj->m_index;
-    pEvent->pdata[1] = pObj->m_zone;
-    pEvent->pdata[2] = pObj->m_subzone;
+    pEvent->vscp_type  = VSCP_TYPE_INFORMATION_CONNECT;
+    pEvent->sizeData   = 3;
+    pEvent->pdata[0]   = pObj->m_index;
+    pEvent->pdata[1]   = pObj->m_zone;
+    pEvent->pdata[2]   = pObj->m_subzone;
     pObj->m_guid.writeGUID(pEvent->GUID);
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
@@ -909,16 +915,16 @@ on_disconnect(struct mosquitto* mosq, void* obj, int rc)
         return;
     }
 
-    pEvent->head = VSCP_HEADER16_DUMB;
-    pEvent->obid = 0;
+    pEvent->head      = VSCP_HEADER16_DUMB;
+    pEvent->obid      = 0;
     pEvent->timestamp = 0; // Let i&f set timestamp
     vscp_setEventToNow(pEvent);
     pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
-    pEvent->vscp_type = VSCP_TYPE_INFORMATION_DISCONNECT;
-    pEvent->sizeData = 3;
-    pEvent->pdata[0] = pObj->m_index;
-    pEvent->pdata[1] = pObj->m_zone;
-    pEvent->pdata[2] = pObj->m_subzone;
+    pEvent->vscp_type  = VSCP_TYPE_INFORMATION_DISCONNECT;
+    pEvent->sizeData   = 3;
+    pEvent->pdata[0]   = pObj->m_index;
+    pEvent->pdata[1]   = pObj->m_zone;
+    pEvent->pdata[2]   = pObj->m_subzone;
     pObj->m_guid.writeGUID(pEvent->GUID);
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
@@ -964,17 +970,17 @@ on_publish(struct mosquitto* mosq, void* obj, int mid)
         return;
     }
 
-    pEvent->head = VSCP_HEADER16_DUMB;
-    pEvent->obid = 0;
+    pEvent->head      = VSCP_HEADER16_DUMB;
+    pEvent->obid      = 0;
     pEvent->timestamp = 0; // Let i&f set timestamp
     vscp_setEventToNow(pEvent);
     pEvent->vscp_class = VSCP_CLASS1_ERROR;
-    pEvent->vscp_type = VSCP_TYPE_ERROR_SUCCESS;
-    pEvent->sizeData = 4;
-    pEvent->pdata[0] = pObj->m_index;
-    pEvent->pdata[1] = pObj->m_zone;
-    pEvent->pdata[2] = pObj->m_subzone;
-    pEvent->pdata[3] = ERROR_CODE_SUCCESS_PUBLISH; // Publish
+    pEvent->vscp_type  = VSCP_TYPE_ERROR_SUCCESS;
+    pEvent->sizeData   = 4;
+    pEvent->pdata[0]   = pObj->m_index;
+    pEvent->pdata[1]   = pObj->m_zone;
+    pEvent->pdata[2]   = pObj->m_subzone;
+    pEvent->pdata[3]   = ERROR_CODE_SUCCESS_PUBLISH; // Publish
     pObj->m_guid.writeGUID(pEvent->GUID);
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
@@ -1021,17 +1027,17 @@ on_subscribe(struct mosquitto* mosq,
         return;
     }
 
-    pEvent->head = VSCP_HEADER16_DUMB;
-    pEvent->obid = 0;
+    pEvent->head      = VSCP_HEADER16_DUMB;
+    pEvent->obid      = 0;
     pEvent->timestamp = 0; // Let i&f set timestamp
     vscp_setEventToNow(pEvent);
     pEvent->vscp_class = VSCP_CLASS1_ERROR;
-    pEvent->vscp_type = VSCP_TYPE_ERROR_SUCCESS;
-    pEvent->sizeData = 4;
-    pEvent->pdata[0] = pObj->m_index;
-    pEvent->pdata[1] = pObj->m_zone;
-    pEvent->pdata[2] = pObj->m_subzone;
-    pEvent->pdata[3] = ERROR_CODE_SUCCESS_SUBSCRIBE; // Subscribe
+    pEvent->vscp_type  = VSCP_TYPE_ERROR_SUCCESS;
+    pEvent->sizeData   = 4;
+    pEvent->pdata[0]   = pObj->m_index;
+    pEvent->pdata[1]   = pObj->m_zone;
+    pEvent->pdata[2]   = pObj->m_subzone;
+    pEvent->pdata[3]   = ERROR_CODE_SUCCESS_SUBSCRIBE; // Subscribe
     pObj->m_guid.writeGUID(pEvent->GUID);
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
@@ -1077,17 +1083,17 @@ on_unsubscribe(struct mosquitto* mosq, void* obj, int mid)
         return;
     }
 
-    pEvent->head = VSCP_HEADER16_DUMB;
-    pEvent->obid = 0;
+    pEvent->head      = VSCP_HEADER16_DUMB;
+    pEvent->obid      = 0;
     pEvent->timestamp = 0; // Let i&f set timestamp
     vscp_setEventToNow(pEvent);
     pEvent->vscp_class = VSCP_CLASS1_ERROR;
-    pEvent->vscp_type = VSCP_TYPE_ERROR_SUCCESS;
-    pEvent->sizeData = 4;
-    pEvent->pdata[0] = pObj->m_index;
-    pEvent->pdata[1] = pObj->m_zone;
-    pEvent->pdata[2] = pObj->m_subzone;
-    pEvent->pdata[3] = ERROR_CODE_SUCCESS_UNSUBSCRIBE; // Unsubscribe
+    pEvent->vscp_type  = VSCP_TYPE_ERROR_SUCCESS;
+    pEvent->sizeData   = 4;
+    pEvent->pdata[0]   = pObj->m_index;
+    pEvent->pdata[1]   = pObj->m_zone;
+    pEvent->pdata[2]   = pObj->m_subzone;
+    pEvent->pdata[3]   = ERROR_CODE_SUCCESS_UNSUBSCRIBE; // Unsubscribe
     pObj->m_guid.writeGUID(pEvent->GUID);
 
     if (!pObj->addEvent2ReceiveQueue(pEvent)) {
@@ -1140,13 +1146,13 @@ on_message(struct mosquitto* mosq,
         double value = std::stod(strMsg);
         uint8_t buf[VSCP_MAX_DATA];
 
-        pEvent->head = VSCP_HEADER16_DUMB;
-        pEvent->obid = 0;
+        pEvent->head      = VSCP_HEADER16_DUMB;
+        pEvent->obid      = 0;
         pEvent->timestamp = 0; // Let i&f set timestamp
         vscp_setEventToNow(pEvent);
         pObj->m_guid.writeGUID(pEvent->GUID);
         pEvent->vscp_class = pObj->m_simple_vscpclass;
-        pEvent->vscp_type = pObj->m_simple_vscptype;
+        pEvent->vscp_type  = pObj->m_simple_vscptype;
 
         switch (pObj->m_simple_vscpclass) {
 
@@ -1170,7 +1176,7 @@ on_message(struct mosquitto* mosq,
 
                 // Allocate data space
                 pEvent->sizeData = size;
-                pEvent->pdata = new uint8_t[size];
+                pEvent->pdata    = new uint8_t[size];
                 if (NULL == pEvent->pdata) {
                     syslog(
                       LOG_ERR,
@@ -1204,7 +1210,7 @@ on_message(struct mosquitto* mosq,
 
                 // Allocate data space
                 pEvent->sizeData = size;
-                pEvent->pdata = new uint8_t[size];
+                pEvent->pdata    = new uint8_t[size];
                 if (NULL == pEvent->pdata) {
                     syslog(
                       LOG_ERR,
@@ -1413,9 +1419,10 @@ workerThread(void* pData)
     mosquitto_unsubscribe_callback_set(mosq, on_unsubscribe);
     mosquitto_log_callback_set(mosq, on_log);
 
-    if (MOSQ_ERR_SUCCESS !=
-        (rv = mosquitto_connect(
-           mosq, pObj->m_host.c_str(), pObj->m_port, pObj->m_keepalive))) {
+    if (MOSQ_ERR_SUCCESS != (rv = mosquitto_connect(mosq,
+                                                    pObj->m_host.c_str(),
+                                                    pObj->m_port,
+                                                    pObj->m_keepalive))) {
         switch (rv) {
 
             case MOSQ_ERR_INVAL:
@@ -1447,8 +1454,9 @@ workerThread(void* pData)
             topic = "/vscp/#";
         }
 
-        if (MOSQ_ERR_SUCCESS != (rv = mosquitto_subscribe(
-                                   mosq, NULL, topic.c_str(), pObj->m_qos))) {
+        if (MOSQ_ERR_SUCCESS !=
+            (rv =
+               mosquitto_subscribe(mosq, NULL, topic.c_str(), pObj->m_qos))) {
 
             switch (rv) {
                 case MOSQ_ERR_INVAL:
@@ -1499,14 +1507,14 @@ workerThread(void* pData)
                     return NULL;
                 }
 
-                pEvent->head = VSCP_HEADER16_DUMB;
-                pEvent->obid = 0;
+                pEvent->head      = VSCP_HEADER16_DUMB;
+                pEvent->obid      = 0;
                 pEvent->timestamp = 0; // Let i&f set timestamp
                 vscp_setEventToNow(pEvent);
                 pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
-                pEvent->vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
-                pEvent->sizeData = 3;
-                pEvent->pdata = new uint8_t[3];
+                pEvent->vscp_type  = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
+                pEvent->sizeData   = 3;
+                pEvent->pdata      = new uint8_t[3];
                 if (NULL == pEvent->pdata) {
                     syslog(LOG_ERR,
                            "[vscpl2drv-mqtt] Out of memory problem when "
@@ -1638,14 +1646,14 @@ workerThread(void* pData)
                     continue;
                 }
 
-                pEvent->head = VSCP_HEADER16_DUMB;
-                pEvent->obid = 0;
+                pEvent->head      = VSCP_HEADER16_DUMB;
+                pEvent->obid      = 0;
                 pEvent->timestamp = 0; // Let i&f set timestamp
                 vscp_setEventToNow(pEvent);
                 pEvent->vscp_class = VSCP_CLASS1_INFORMATION;
-                pEvent->vscp_type = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
-                pEvent->sizeData = 3;
-                pEvent->pdata = new uint8_t[3];
+                pEvent->vscp_type  = VSCP_TYPE_INFORMATION_NODE_HEARTBEAT;
+                pEvent->sizeData   = 3;
+                pEvent->pdata      = new uint8_t[3];
                 if (NULL == pEvent->pdata) {
                     syslog(LOG_ERR,
                            "[vscpl2drv-mqtt] Out of memory problem when "
@@ -1718,7 +1726,7 @@ workerThread(void* pData)
             }
 
             struct timespec ts;
-            ts.tv_sec = 0;
+            ts.tv_sec  = 0;
             ts.tv_nsec = 10000; // 10 ms
             if (ETIMEDOUT == sem_timedwait(&pObj->m_semSendQueue, &ts)) {
                 continue;

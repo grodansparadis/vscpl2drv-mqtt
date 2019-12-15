@@ -254,6 +254,9 @@ class Cmqttobj
     /// used.
     std::string m_keyfile;
 
+    /// Enable encryption
+    bool bEnableEncryption;
+
     /// Receive Filter
     vscpEventFilter m_vscpfilterRx;
 
