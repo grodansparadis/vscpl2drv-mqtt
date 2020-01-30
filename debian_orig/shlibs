@@ -1,1 +1,1 @@
-vscpl2drv-automation %MAJOR-VERSION vscpl2drv-automation%MAJOR-VERSION (>= %MAJOR-VERSION.%MINOR-VERSION-%RELEASE-DEBIAN) 
+vscpl2drv-mqtt %MAJOR-VERSION vscpl2drv-mqtt (>= %MAJOR-VERSION.%MINOR-VERSION-%RELEASE-DEBIAN) 

@@ -259,17 +259,17 @@ VSCPRead(long handle, vscpEvent* pEvent, unsigned long timeout)
             return CANAL_ERROR_TIMEOUT;
         } else if (EINTR == errno) {
             syslog(LOG_ERR,
-                   "[vscpl2drv-automation] Interrupted by a signal handler");
+                   "[vscpl2drv-mqtt] Interrupted by a signal handler");
             return CANAL_ERROR_INTERNAL;
         } else if (EINVAL == errno) {
             syslog(LOG_ERR,
-                   "[vscpl2drv-automation] Invalid semaphore (timout)");
+                   "[vscpl2drv-mqtt] Invalid semaphore (timout)");
             return CANAL_ERROR_INTERNAL;
         } else if (EAGAIN == errno) {
-            syslog(LOG_ERR, "[vscpl2drv-automation] Blocking error");
+            syslog(LOG_ERR, "[vscpl2drv-mqtt] Blocking error");
             return CANAL_ERROR_INTERNAL;
         } else {
-            syslog(LOG_ERR, "[vscpl2drv-automation] Unknown error");
+            syslog(LOG_ERR, "[vscpl2drv-mqtt] Unknown error");
             return CANAL_ERROR_INTERNAL;
         }
     }

@@ -139,7 +139,7 @@ Cmqttobj::~Cmqttobj()
     =========
 
     <?xml version = "1.0" encoding = "UTF-8" ?>
-    <!-- Version 0.0.1    2019-11-29   -->
+    <!-- Version 0.0.1    2020-01-21   -->
     <config debug="true|false"
             access="rw"
             keepalive="60"
@@ -697,19 +697,19 @@ Cmqttobj::parseHLO(uint16_t size, uint8_t* inbuf, CHLO* phlo)
     if (NULL == inbuf) {
         syslog(
           LOG_ERR,
-          "[vscpl2drv-automation] HLO parser: HLO in-buffer pointer is NULL.");
+          "[vscpl2drv-mqtt] HLO parser: HLO in-buffer pointer is NULL.");
         return false;
     }
 
     if (NULL == phlo) {
         syslog(LOG_ERR,
-               "[vscpl2drv-automation] HLO parser: HLO obj pointer is NULL.");
+               "[vscpl2drv-mqtt] HLO parser: HLO obj pointer is NULL.");
         return false;
     }
 
     if (!size) {
         syslog(LOG_ERR,
-               "[vscpl2drv-automation] HLO parser: HLO buffer size is zero.");
+               "[vscpl2drv-mqtt] HLO parser: HLO buffer size is zero.");
         return false;
     }
 
@@ -723,7 +723,7 @@ Cmqttobj::parseHLO(uint16_t size, uint8_t* inbuf, CHLO* phlo)
     memcpy(buf, inbuf, size);
 
     if (!XML_ParseBuffer(xmlParser, size, size == 0)) {
-        syslog(LOG_ERR, "[vscpl2drv-automation] Failed parse XML setup.");
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Failed parse XML setup.");
         XML_ParserFree(xmlParser);
         return false;
     }
@@ -746,13 +746,13 @@ Cmqttobj::handleHLO(vscpEvent* pEvent)
     // Check pointers
     if (NULL == pEvent) {
         syslog(LOG_ERR,
-               "[vscpl2drv-automation] HLO handler: NULL event pointer.");
+               "[vscpl2drv-mqtt] HLO handler: NULL event pointer.");
         return false;
     }
 
     CHLO hlo;
     if (!parseHLO(pEvent->sizeData, pEvent->pdata, &hlo)) {
-        syslog(LOG_ERR, "[vscpl2drv-automation] Failed to parse HLO.");
+        syslog(LOG_ERR, "[vscpl2drv-mqtt] Failed to parse HLO.");
         return false;
     }
 
@@ -760,8 +760,8 @@ Cmqttobj::handleHLO(vscpEvent* pEvent)
     ex.head      = 0;
     ex.timestamp = vscp_makeTimeStamp();
     vscp_setEventExToNow(&ex); // Set time to current time
-    ex.vscp_class = VSCP_CLASS2_PROTOCOL;
-    ex.vscp_type  = VSCP2_TYPE_PROTOCOL_HIGH_LEVEL_OBJECT;
+    ex.vscp_class = VSCP_CLASS2_HLO;
+    ex.vscp_type  = VSCP2_TYPE_HLO_COMMAND;
     m_guid.writeGUID(ex.GUID);
 
     switch (hlo.m_op) {

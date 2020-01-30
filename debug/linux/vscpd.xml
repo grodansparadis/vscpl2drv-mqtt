@@ -2,7 +2,7 @@
 
 <!--
   This is a configuration file for the VSCP daemon that is used to
-  debug the vscpl2drv-automation driver.
+  debug the vscpl2drv-mqtt driver.
 -->
 
 <vscpconfig>

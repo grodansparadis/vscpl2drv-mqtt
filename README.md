@@ -223,9 +223,9 @@ After installing the driver you need to add it to the vscpd.conf file (/etc/vscp
 
 You also need to set up a configuration file for the driver. If you don't need to dynamically edit the content of this file a good and safe location for it is in the */etc/vscp/* folder alongside the VSCP daemon configuration file.
 
-If you need to do dynamic configuration we recommend that you create the file in the */var/vscp/vscpl2drv-automation*
+If you need to do dynamic configuration we recommend that you create the file in the */var/vscp/vscpl2drv-mqtt*
 
-A sample configuration file is make available in */usr/share/vscpl2drv-automation* during installation.
+A sample configuration file is make available in */usr/share/vscpl2drv-mqtt* during installation.
 
 
 ## Install the driver on Windows
@@ -642,3 +642,6 @@ The lowest three bits are all zero here but could have been an index (0-7) to a 
 * Mosquitto - https://mosquitto.org/
 *  Using the API - https://www.eclipse.org/paho/files/mqttdoc/Cclient/
 *  MQTT på arduino - https://knolleary.net/arduino-client-for-mqtt/
+
+### Copyright
+Copyright (C) 2000-2020 Ake Hedman, Grodans Paradis AB - MIT license.

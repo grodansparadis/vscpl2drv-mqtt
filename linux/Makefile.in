@@ -35,19 +35,18 @@ WARNINGS = -Wall
 
 VERSION_DEFS = -DMAJOR_VERSION=$(MAJOR_VERSION) -DMINOR_VERSION=$(MINOR_VERSION) \
 	-DRELEASE_VERSION=$(RELEASE_VERSION) -DBUILD_VERSION=$(BUILD_VERSION)
-CFLAGS = -std=c99 @CFLAGS@ ${WARNINGS} -fPIC -DCBC -I..-I../vscp/src/vscp/common  -I../vscp/src/common \
-
+CFLAGS = -std=c99 @CFLAGS@ ${WARNINGS} -fPIC -DCBC -I..-I../vscp/src/vscp/common  -I../vscp/src/common
 CXXFLAGS = -std=c++11 ${WARNINGS} -D__LINUX__ -fPIC -D_REENTRANT @CXXFLAGS@ 
 CPPFLAGS = -D__LINUX__ -fPIC @CPPFLAGS@  ${WARNINGS} -fno-var-tracking-assignments -I..\
  	-I../vscp/src/vscp/common -I../vscp/src/common \
-	-I../vscp/src/common/nlohmann \
+	-I../vscp/src/common/third_party/nlohmann \
 	$(VERSION_DEFS)
 
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 EXTRALIBS = @EXTRALIBS@
 
-DLFLAGS = -g -shared -fPIC
+DLFLAGS = -g -shared -fPIC -Wl,--no-undefined
 STRIP = strip
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_DATA = ${INSTALL} -m 644
@@ -79,7 +78,8 @@ MQTT_OBJECTS = vscpl2drv_mqtt.o\
 	vscp_aes.o\
 	vscpmd5.o\
 	fastpbkdf2.o\
-	vscpbase64.o
+	vscpbase64.o\
+	hlo.o
 
 ### Targets: ###
 
@@ -89,7 +89,7 @@ test:  test.o $(PROJOBJS)
 	$(CXX) -o $@ test.o $(PROJOBJS) $(LDFLAGS) $(LIBS) $(EXTRALIBS)
 
 $(LIB_PLUS_VER): $(MQTT_OBJECTS)
-	$(CXX) -o $@ $(MQTT_OBJECTS) $(DLFLAGS) $(LIBS) $(EXTRALIBS)
+	$(CXX) -Wl,-soname,$(LIB_SONAME) -o $@ $(MQTT_OBJECTS) $(DLFLAGS) $(LIBS) $(EXTRALIBS)
 	ar rcs libvscpl2drv-mqtt.a $(MQTT_OBJECTS)
 
 mqttobj.o: ../common/mqttobj.cpp ../common/mqttobj.h
@@ -112,6 +112,9 @@ sockettcp.o: ../vscp/src/common/sockettcp.c ../vscp/src/common/sockettcp.h
 
 guid.o: ../vscp/src/vscp/common/guid.cpp ../vscp/src/vscp/common/guid.h
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c ../vscp/src/vscp/common/guid.cpp -o $@
+
+hlo.o: ../vscp/src/vscp/common/hlo.cpp ../vscp/src/vscp/common/hlo.h
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c ../vscp/src/vscp/common/hlo.cpp -o $@
 
 vscp_aes.o: ../vscp/src/common/vscp_aes.c ../vscp/src/common/vscp_aes.h
 	$(CC) $(CFLAGS) -c ../vscp/src/common/vscp_aes.c -o $@
@@ -141,7 +144,7 @@ install: all
 	ln -fs $(libdir)/$(LIB_PLUS_VER) $(DESTDIR)$(libdir)/vscpl2drv-mqtt.so
 	ln -fs $(libdir)/$(LIB_PLUS_VER) $(DESTDIR)$(libdir)/vscpl2drv-mqtt.so.$(MAJOR_VERSION)
 	ln -fs $(libdir)/$(LIB_PLUS_VER) $(DESTDIR)$(libdir)/vscpl2drv-mqtt.so.$(MAJOR_VERSION).$(MINOR_VERSION
-	$(INSTALL_PROGRAM) vscpl2drv-automation.a $(DESTDIR)$(libdir)
+	$(INSTALL_PROGRAM) vscpl2drv-mqtt.a $(DESTDIR)$(libdir)
 
 uninstall:
 	rm -f  $(DESTDIR)$(libdir)/vscpl2drv-mqtt.so

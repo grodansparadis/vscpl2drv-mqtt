@@ -73,6 +73,8 @@ class Cmqttobj
 
     /*!
         Open
+	@param pathcfg Path to configuration file
+        @param guid Unique GUID for driver.
         @return True on success.
      */
     bool open(std::string& pathcfg, cguid& guid);

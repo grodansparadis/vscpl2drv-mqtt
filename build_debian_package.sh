@@ -7,21 +7,24 @@ RELEASE_VERSION=`head -n4  VERSION.m4 |  grep release_version | tr -d "m4_define
 BUILD_VERSION=`head -n4  VERSION.m4 |  grep build_version | tr -d "m4_define[build_version], ()"`
 RELEASE_DEBIAN=`head -n4  VERSION.m4 |  grep release_debian | tr -d "m4_define[release_debian], ()"`
 
-NAME_PLUS_VER="vscpl2drv-automation$MAJOR_VERSION-$MAJOR_VERSION.$MINOR_VERSION.$RELEASE_VERSION"
+NAME_PLUS_VER="vscpl2drv-mqtt-$MAJOR_VERSION.$MINOR_VERSION.$RELEASE_VERSION"
 #BUILD_FOLDER="dist/`date +vscp_build_%y%m%d_%H%M%S`"
-BUILD_FOLDER="dist"
+rm -rf ../dist/*
+BUILD_FOLDER="../dist"
+DATENOW="`date -R`"
 
 # Debian compability 10 on Raspberry
 # relevant for 'control' and 'compat'
-COMPAT="8"
+COMPAT="12"
 
 # makes correct /usr/lib subfolder (/usr/lib/x86_64-linux-gnu/), none on Raspberry
 # relevant for 'install' and 'links'
 #SUBFOLDER='$(DEB_BUILD_GNU_CPU)-$(DEB_BUILD_GNU_SYSTEM)'
-SUBFOLDER="x86_64-linux-gnu"
+#SUBFOLDER="x86_64-linux-gnu"
+SUBFOLDER=""
 
 # dependencies for control
-DEPENDENCY="libc6-dev (>= 2.14), libstdc++6 (>= 5.2), libgcc1 (>= 1:3.0), libssl-dev (>=1.0)"
+DEPENDENCY="libc6-dev (>= 2.14), libstdc++6 (>= 4.9), libgcc1 (>= 1:3.0), libssl-dev (>=1.0)"
 
 # Get OS and version
 if [ -f /etc/os-release ]; then
@@ -120,7 +123,6 @@ mkdir -p $BUILD_FOLDER
 
 # Clean project
 make clean
-rm -rf dist/*
 vscp/clean_for_dist
 ./clean_for_dist
 
@@ -151,6 +153,7 @@ sed -i "s/%BUILD-VERSION/${BUILD_VERSION}/g" debian/*
 sed -i "s/%RELEASE-DEBIAN/${RELEASE_DEBIAN}/g" debian/*
 sed -i "s/%COMPAT/${COMPAT}/g" debian/*
 sed -i "s/%SUBFOLDER/${SUBFOLDER}/g" debian/*
+sed -i "s/%DATENOW/${DATENOW}/g" debian/*
 
 echo "***   ---Now do 'dpkg-buildpackage -us -uc' or 'dpkg-buildpackage -b'"
 

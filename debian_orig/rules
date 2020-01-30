@@ -4,9 +4,9 @@
 	dh $@ --with autoreconf
 
 override_dh_shlibdeps:
-	dpkg-shlibdeps -Tdebian/vscpl2drv-automation.substvars $$(pwd)/debian/vscpl2drv-automation%MAJOR-VERSION/usr/lib/%SUBFOLDER/vscpl2drv-automation.so.%MAJOR-VERSION.%MINOR-VERSION.%RELEASE-VERSION
+	dpkg-shlibdeps -Tdebian/vscpl2drv-mqtt.substvars $$(pwd)/debian/vscpl2drv-mqtt/var/lib/vscp/drivers/level2/vscpl2drv-mqtt.so.%MAJOR-VERSION.%MINOR-VERSION.%RELEASE-VERSION
 
 
 override_dh_auto_install:
-	strip linux/vscpl2drv-automation.so.%MAJOR-VERSION.%MINOR-VERSION.%RELEASE-VERSION
+	strip linux/vscpl2drv-mqtt.so.%MAJOR-VERSION.%MINOR-VERSION.%RELEASE-VERSION
 

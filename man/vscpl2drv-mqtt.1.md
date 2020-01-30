@@ -1,6 +1,6 @@
 % vscpl2drv-mqtt(1) VSCP Level II MQTT Driver
 % Åke Hedman, Grodans Paradis AB
-% January 01, 2020
+% January 20, 2020
 
 # NAME
 
