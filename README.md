@@ -1,5 +1,7 @@
 # vscpl2drv-mqtt
 
+**This driver is not ported to version 14.0 yet.**
+
 <img src="https://vscp.org/images/logo.png" width="100">
 
 - **Available for**: Linux, Windows
@@ -10,6 +12,37 @@ MQTT provides a lightweight method of carrying out messaging using a publish/sub
 
 This driver allow publishing of VSCP events as well as subscribing to VSCP events over mqtt. VSCP provide a lot for IoT functionality than mqtt with it's trasport work and they work very well together.
 To build and use the driver you need yo install the Mosquitto library. You can find instruction on how to do that [here](https://grodansparadis.gitbooks.io/the-vscp-daemon/installing_moquitto_for_use_with_vscp.md).
+
+## Build
+
+Checkout with
+
+```bash
+git checkout https://github.com/grodansparadis/vscpl2drv-mqtt.git
+cd vscpl2drv-mqtt
+git clone --recursive https://github.com/grodansparadis/vscpl2drv-mqtt.git
+./configure [-enable-debug]
+make
+make install
+```
+
+Uou need to install libmosquitto-dev and sudo apt install libexpat-dev with 
+
+```bash
+sudo apt install libmosquitto-dev
+sudo apt install libexpat-dev
+```
+
+before configure and build.
+
+## Install
+Install the Debian instaöll file with
+
+```bash
+sudo apt install ./vscpl2-mqtt.deb
+```
+
+from the folder where you put the downloaded file.
 
 ## Configuration
 
