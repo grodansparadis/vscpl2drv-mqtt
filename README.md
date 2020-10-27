@@ -36,7 +36,7 @@ sudo apt install libexpat-dev
 before configure and build.
 
 ## Install
-Install the Debian instaöll file with
+Install the Debian install file with
 
 ```bash
 sudo apt install ./vscpl2-mqtt.deb
