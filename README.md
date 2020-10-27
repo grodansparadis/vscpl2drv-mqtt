@@ -18,9 +18,8 @@ To build and use the driver you need yo install the Mosquitto library. You can f
 Checkout with
 
 ```bash
-git checkout https://github.com/grodansparadis/vscpl2drv-mqtt.git
-cd vscpl2drv-mqtt
 git clone --recursive https://github.com/grodansparadis/vscpl2drv-mqtt.git
+cd vscpl2drv-mqtt
 ./configure [-enable-debug]
 make
 make install
