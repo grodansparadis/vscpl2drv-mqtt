@@ -34,6 +34,15 @@ sudo apt install libexpat-dev
 
 before configure and build.
 
+You can also use
+
+```bash
+git submodule init 
+git submodule update
+```
+
+to init the vscp submodule if you allready checked it out.
+
 ## Install
 Install the Debian install file with
 
