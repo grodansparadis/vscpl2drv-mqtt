@@ -37,8 +37,8 @@
                 "/usr/local/include",
                 "${workspaceFolder}/mongoose",
                 "${workspaceFolder}/common",
-                "${workspaceFolder}/vscp/src/common",
-                "${workspaceFolder}/vscp/src/vscp/common",
+                "${workspaceFolder}/third-party/vscp/src/common",
+                "${workspaceFolder}/third-party/vscp/src/vscp/common",
                 "${workspaceFolder}/linux"
             ],
             "defines": [],
@@ -55,8 +55,8 @@
                     "/usr/include",
                     "/usr/local/include",
                     "${workspaceFolder}/common",
-                    "${workspaceFolder}/vscp/src/common",
-                    "${workspaceFolder}/vscp/src/vscp/common",
+                    "${workspaceFolder}/third-party/vscp/src/common",
+                    "${workspaceFolder}/third-party/vscp/src/vscp/common",
                     "${workspaceFolder}/linux"
                 ],
                 "limitSymbolsToIncludedHeaders": true,

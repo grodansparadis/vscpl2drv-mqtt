@@ -289,4 +289,4 @@ class Cmqttobj
     pthread_mutex_t m_mutexReceiveQueue;
 };
 
-#endif // defined _VSCPMQTT_H__INCLUDED_
+#endif  // defined _VSCPMQTT_H__INCLUDED_

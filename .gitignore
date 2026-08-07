@@ -39,3 +39,7 @@ linux/test
 
 # Dist folder
 dist/
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

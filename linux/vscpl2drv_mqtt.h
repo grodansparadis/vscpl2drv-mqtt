@@ -98,4 +98,4 @@ getDriverObject(long handle);
 void
 removeDriverObject(long handle);
 
-#endif // !defined(VSCPL2_H__A388C093_AD35_4672_8BF7_DBC702C6B0C8__INCLUDED_)
+#endif  // !defined(VSCPL2_H__A388C093_AD35_4672_8BF7_DBC702C6B0C8__INCLUDED_)

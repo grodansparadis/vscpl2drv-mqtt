@@ -76,5 +76,6 @@
         "valarray": "cpp",
         "variant": "cpp",
         "bit": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "/home/akhe/development/VSCP/vscpl2drv-mqtt"
 }

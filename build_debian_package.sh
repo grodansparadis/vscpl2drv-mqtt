@@ -123,7 +123,7 @@ mkdir -p $BUILD_FOLDER
 
 # Clean project
 make clean
-vscp/clean_for_dist
+third-party/vscp/clean_for_dist
 ./clean_for_dist
 
 echo "---Copying Debian_orig to destination folder"
