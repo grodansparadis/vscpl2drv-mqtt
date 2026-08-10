@@ -39,16 +39,22 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libexpat1-dev libmosquitto-dev libssl-dev
+          sudo apt-get install --yes libcjson-dev libexpat1-dev libmosquitto-dev libssl-dev
 
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
-        run: brew install expat mosquitto openssl@3
+        run: brew install cjson expat mosquitto openssl@3
 
       - name: Install Windows dependencies
         if: runner.os == 'Windows'
         shell: pwsh
-        run: vcpkg install expat:x64-windows mosquitto:x64-windows openssl:x64-windows
+        run: vcpkg install cjson:x64-windows expat:x64-windows mosquitto:x64-windows openssl:x64-windows
+
+      - name: Set up MSVC developer environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - name: Configure Linux
         if: runner.os == 'Linux'
@@ -58,7 +64,7 @@ jobs:
         if: runner.os == 'macOS'
         run: >-
           cmake --preset ${{ matrix.preset }}
-          -DCMAKE_PREFIX_PATH="$(brew --prefix expat);$(brew --prefix mosquitto);$(brew --prefix openssl@3)"
+          -DCMAKE_PREFIX_PATH="$(brew --prefix cjson);$(brew --prefix expat);$(brew --prefix mosquitto);$(brew --prefix openssl@3)"
 
       - name: Configure Windows
         if: runner.os == 'Windows'

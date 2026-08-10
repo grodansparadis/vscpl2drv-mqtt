@@ -34,9 +34,8 @@
         {
             "name": "windows-debug",
             "displayName": "Windows Debug",
-            "description": "Debug build for Windows using Visual Studio",
-            "generator": "Visual Studio 17 2022",
-            "architecture": "x64",
+            "description": "Debug build for Windows using Ninja",
+            "generator": "Ninja",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
@@ -50,9 +49,8 @@
         {
             "name": "windows-release",
             "displayName": "Windows Release",
-            "description": "Release build for Windows using Visual Studio",
-            "generator": "Visual Studio 17 2022",
-            "architecture": "x64",
+            "description": "Release build for Windows using Ninja",
+            "generator": "Ninja",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
