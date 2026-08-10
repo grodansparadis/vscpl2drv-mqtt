@@ -65,7 +65,7 @@ target_include_directories(vscpl2drv_mqtt PRIVATE
     ${MOSQUITTO_INCLUDE_DIR}
     ${MOSQUITTO_INCLUDE_DIRS}
     $<$<TARGET_EXISTS:cJSON::cJSON>:$<TARGET_PROPERTY:cJSON::cJSON,INTERFACE_INCLUDE_DIRECTORIES>>
-    ${CJSON_INCLUDE_DIR}
+    $<$<BOOL:${CJSON_INCLUDE_DIR}>:${CJSON_INCLUDE_DIR}>
 )
 
 target_compile_definitions(vscpl2drv_mqtt PRIVATE

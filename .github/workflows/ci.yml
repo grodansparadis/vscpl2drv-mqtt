@@ -39,7 +39,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libexpat1-dev libmosquitto-dev libssl-dev
+          sudo apt-get install --yes libcjson-dev libexpat1-dev libmosquitto-dev libssl-dev
 
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
