@@ -55,6 +55,31 @@
 
 #include "mqttobj.h"
 
+// macOS does not provide sem_timedwait; supply a portable replacement
+#ifdef __APPLE__
+#include <errno.h>
+static int
+sem_timedwait(sem_t* sem, const struct timespec* abs_timeout)
+{
+    while (sem_trywait(sem) != 0) {
+        if (errno != EAGAIN) {
+            return -1;
+        }
+        struct timespec now;
+        clock_gettime(CLOCK_REALTIME, &now);
+        if (now.tv_sec > abs_timeout->tv_sec ||
+            (now.tv_sec == abs_timeout->tv_sec &&
+             now.tv_nsec >= abs_timeout->tv_nsec)) {
+            errno = ETIMEDOUT;
+            return -1;
+        }
+        struct timespec sleep_ts = { 0, 1000000 }; // sleep 1 ms
+        nanosleep(&sleep_ts, NULL);
+    }
+    return 0;
+}
+#endif
+
 // Forward declarations
 void*
 workerThread(void* pData);
@@ -1472,12 +1497,13 @@ workerThread(void* pData)
 
             case MOSQ_ERR_ERRNO:
                 char errbuf[128];
+                strerror_r(errno, errbuf, sizeof(errbuf));
                 syslog(
                   LOG_ERR,
                   "[vscpl2drv-mqtt] A system call returned an error. [%d %s] "
                   "Terminating",
                   errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  errbuf);
                 mosquitto_destroy(mosq);
                 return NULL;
         }
@@ -1615,11 +1641,12 @@ workerThread(void* pData)
 
                     case MOSQ_ERR_ERRNO:
                         char buf[128];
+                        strerror_r(errno, buf, sizeof(buf));
                         syslog(LOG_ERR,
                                "[vscpl2drv-mqtt] A systemcall returned "
                                "an error [%d] %s",
                                errno,
-                               strerror_r(errno, buf, sizeof(buf)));
+                               buf);
                         pObj->m_bQuit = true;
                         break;
                 }
@@ -1753,11 +1780,12 @@ workerThread(void* pData)
 
                     case MOSQ_ERR_ERRNO:
                         char buf[128];
+                        strerror_r(errno, buf, sizeof(buf));
                         syslog(LOG_ERR,
                                "[vscpl2drv-mqtt] A systemcall returned "
                                "an error [%d] %s",
                                errno,
-                               strerror_r(errno, buf, sizeof(buf)));
+                               buf);
                         pObj->m_bQuit = true;
                         break;
                 }
