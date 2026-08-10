@@ -52,6 +52,9 @@ target_include_directories(vscpl2drv_mqtt PRIVATE
     ${CMAKE_SOURCE_DIR}/linux
     ${CMAKE_SOURCE_DIR}/third-party/vscp/src/common
     ${CMAKE_SOURCE_DIR}/third-party/vscp/src/vscp/common
+    ${MOSQUITTO_INCLUDE_DIRS}
+    ${EXPAT_INCLUDE_DIRS}
+    ${OPENSSL_INCLUDE_DIR}
 )
 
 target_compile_definitions(vscpl2drv_mqtt PRIVATE
