@@ -50,6 +50,12 @@ jobs:
         shell: pwsh
         run: vcpkg install expat:x64-windows mosquitto:x64-windows openssl:x64-windows
 
+      - name: Set up MSVC developer environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Configure Linux
         if: runner.os == 'Linux'
         run: cmake --preset ${{ matrix.preset }}
