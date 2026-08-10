@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux build
+            os: ubuntu-latest
+            preset: linux-release
+            build: true
+          - name: macOS build
+            os: macos-latest
+            preset: macos-release
+            build: true
+          - name: Windows configure
+            os: windows-latest
+            preset: windows-release
+            build: false
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libexpat1-dev libmosquitto-dev libssl-dev
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install expat mosquitto openssl@3
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: vcpkg install expat:x64-windows mosquitto:x64-windows openssl:x64-windows
+
+      - name: Configure Linux
+        if: runner.os == 'Linux'
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Configure macOS
+        if: runner.os == 'macOS'
+        run: >-
+          cmake --preset ${{ matrix.preset }}
+          -DCMAKE_PREFIX_PATH="$(brew --prefix expat);$(brew --prefix mosquitto);$(brew --prefix openssl@3)"
+
+      - name: Configure Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: cmake --preset ${{ matrix.preset }} -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        if: matrix.build
+        run: cmake --build --preset ${{ matrix.preset }} --target vscpl2drv_mqtt
+
+      - name: Explain Windows coverage
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Write-Output "Windows CI validates dependency discovery and CMake generation; the driver implementation is currently POSIX-only."
