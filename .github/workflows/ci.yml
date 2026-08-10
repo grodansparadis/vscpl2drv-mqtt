@@ -48,7 +48,7 @@ jobs:
       - name: Install Windows dependencies
         if: runner.os == 'Windows'
         shell: pwsh
-        run: vcpkg install expat:x64-windows mosquitto:x64-windows openssl:x64-windows
+        run: vcpkg install cjson:x64-windows expat:x64-windows mosquitto:x64-windows openssl:x64-windows
 
       - name: Set up MSVC developer environment
         if: runner.os == 'Windows'
