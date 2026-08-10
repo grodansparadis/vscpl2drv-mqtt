@@ -28,6 +28,14 @@ find_package(EXPAT REQUIRED)
 find_package(Mosquitto REQUIRED)
 find_package(Threads REQUIRED)
 
+# mosquitto >= 2.1 transitively includes <cjson/cJSON.h>; find it so the
+# compiler can locate the header on platforms (e.g. macOS/Homebrew) where
+# it is installed outside the default system include paths.
+find_package(cJSON CONFIG QUIET)
+if(NOT cJSON_FOUND)
+    find_path(CJSON_INCLUDE_DIR cjson/cJSON.h)
+endif()
+
 find_library(RT_LIBRARY rt)
 
 add_library(vscpl2drv_mqtt SHARED
@@ -56,6 +64,8 @@ target_include_directories(vscpl2drv_mqtt PRIVATE
     ${EXPAT_INCLUDE_DIRS}
     ${MOSQUITTO_INCLUDE_DIR}
     ${MOSQUITTO_INCLUDE_DIRS}
+    $<$<TARGET_EXISTS:cjson>:$<TARGET_PROPERTY:cjson,INTERFACE_INCLUDE_DIRECTORIES>>
+    ${CJSON_INCLUDE_DIR}
 )
 
 target_compile_definitions(vscpl2drv_mqtt PRIVATE
