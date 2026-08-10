@@ -2,26 +2,24 @@
 
 **This driver is not ported to version 14.0 yet.**
 
-<img src="https://vscp.org/images/logo.png" width="100">
-
-- **Available for**: Linux, Windows
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+sudo cmake --install build
 - **Driver Linux**: vscpl2drv-mqtt.so
 - **Driver Windows**: vscpl2drv-mqtt.dll
-
+You need to install the Mosquitto, Expat, and OpenSSL development packages before configuring the build:
 MQTT provides a lightweight method of carrying out messaging using a publish/subscribe model. This makes it suitable for "machine to machine" messaging such as with low power sensors or mobile devices such as phones, embedded computers or micro controllers like the Arduino. A good example of this is all of the work that Andy Stanford-Clark IBM (one of the originators of MQTT) has done in home monitoring and automation with his twittering house and twittering ferry. The MQTT protocol is now an ISO standard maintained by OASIS.
 
-This driver allow publishing of VSCP events as well as subscribing to VSCP events over mqtt. VSCP provide a lot for IoT functionality than mqtt with it's trasport work and they work very well together.
-To build and use the driver you need yo install the Mosquitto library. You can find instruction on how to do that [here](https://grodansparadis.gitbooks.io/the-vscp-daemon/installing_moquitto_for_use_with_vscp.md).
+sudo apt install libmosquitto-dev libexpat1-dev libssl-dev
 
 ## Build
 
 Checkout with
 
-```bash
-git clone --recursive https://github.com/grodansparadis/vscpl2drv-mqtt.git
+git submodule update --init --recursive
 cd vscpl2drv-mqtt
 ./configure [-enable-debug]
-make
+to initialize the VSCP submodule if you already checked out the repository.
 make install
 ```
 

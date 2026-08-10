@@ -4,6 +4,16 @@ project(vscpl2drv-mqtt VERSION 1.1.0 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 
+# Make the repository root config.h and the unpacked nlohmann header visible.
+include_directories(
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/compat/vscp
+    ${CMAKE_SOURCE_DIR}/third-party/json/include
+    ${CMAKE_SOURCE_DIR}/third-party/Mustache
+    ${CMAKE_SOURCE_DIR}/third-party/spdlog/include
+    ${CMAKE_SOURCE_DIR}/third-party/fmt/include
+)
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 11)
@@ -11,11 +21,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(VSCP_THIRD_PARTY_DIR "${CMAKE_SOURCE_DIR}/third-party/vscp")
-set(VSCP_COMMON_C_DIR "${VSCP_THIRD_PARTY_DIR}/src/common")
-set(VSCP_COMMON_CPP_DIR "${VSCP_THIRD_PARTY_DIR}/src/vscp/common")
-
-list(APPEND CMAKE_MODULE_PATH "${VSCP_THIRD_PARTY_DIR}/cmake/modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third-party/vscp/cmake/modules")
 
 find_package(OpenSSL REQUIRED)
 find_package(EXPAT REQUIRED)
@@ -24,36 +30,28 @@ find_package(Threads REQUIRED)
 
 find_library(RT_LIBRARY rt)
 
-configure_file(${CMAKE_SOURCE_DIR}/config.h ${CMAKE_BINARY_DIR}/config.h COPYONLY)
-
-add_library(vscpl2drv_mqtt SHARED)
-target_sources(vscpl2drv_mqtt PRIVATE
+add_library(vscpl2drv_mqtt SHARED
     linux/vscpl2drv_mqtt.cpp
     common/mqttobj.cpp
-    ${VSCP_COMMON_CPP_DIR}/vscpremotetcpif.cpp
-    ${VSCP_COMMON_CPP_DIR}/vscphelper.cpp
-    ${VSCP_COMMON_CPP_DIR}/vscpdatetime.cpp
-    ${VSCP_COMMON_CPP_DIR}/guid.cpp
-    ${VSCP_COMMON_CPP_DIR}/hlo.cpp
-    ${VSCP_COMMON_C_DIR}/sockettcp.c
-    ${VSCP_COMMON_C_DIR}/vscp_aes.c
-    ${VSCP_COMMON_C_DIR}/crc.c
-    ${VSCP_COMMON_C_DIR}/crc8.c
-    ${VSCP_COMMON_C_DIR}/vscpbase64.c
-    ${VSCP_COMMON_C_DIR}/fastpbkdf2.c
-    ${VSCP_COMMON_C_DIR}/vscpmd5.c
+    third-party/vscp/src/vscp/common/vscpremotetcpif.cpp
+    third-party/vscp/src/vscp/common/vscphelper.cpp
+    third-party/vscp/src/vscp/common/vscpdatetime.cpp
+    third-party/vscp/src/vscp/common/guid.cpp
+    third-party/vscp/src/vscp/common/hlo.cpp
+    third-party/vscp/src/common/sockettcp.c
+    third-party/vscp/src/common/vscp-aes.c
+    third-party/vscp/src/common/crc.c
+    third-party/vscp/src/common/crc8.c
+    third-party/vscp/src/common/vscpbase64.c
+    third-party/vscp/src/common/vscpmd5.c
 )
 
 target_include_directories(vscpl2drv_mqtt PRIVATE
-    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/common
     ${CMAKE_SOURCE_DIR}/linux
-    ${VSCP_COMMON_C_DIR}
-    ${VSCP_COMMON_CPP_DIR}
-    ${VSCP_COMMON_C_DIR}/third_party/nlohmann
-    ${EXPAT_INCLUDE_DIRS}
-    ${MOSQUITTO_INCLUDE_DIR}
+    ${CMAKE_SOURCE_DIR}/third-party/vscp/src/common
+    ${CMAKE_SOURCE_DIR}/third-party/vscp/src/vscp/common
 )
 
 target_compile_definitions(vscpl2drv_mqtt PRIVATE
@@ -63,7 +61,9 @@ target_compile_definitions(vscpl2drv_mqtt PRIVATE
     MINOR_VERSION=${PROJECT_VERSION_MINOR}
     RELEASE_VERSION=${PROJECT_VERSION_PATCH}
     BUILD_VERSION=0
+    FMT_HEADER_ONLY
     OPENSSL_API_1_1
+    SPDLOG_FMT_EXTERNAL
     _REENTRANT
 )
 

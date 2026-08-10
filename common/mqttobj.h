@@ -37,7 +37,7 @@
 #include <unistd.h>
 
 #include <canal.h>
-#include <canal_macro.h>
+#include <canal-macro.h>
 #include <guid.h>
 #include <hlo.h>
 #include <vscp.h>

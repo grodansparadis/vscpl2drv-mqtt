@@ -34,7 +34,7 @@
 #include <stdlib.h>
 
 #include <canal.h>
-#include <canal_macro.h>
+#include <canal-macro.h>
 #include <vscp.h>
 #include <vscphelper.h>
 

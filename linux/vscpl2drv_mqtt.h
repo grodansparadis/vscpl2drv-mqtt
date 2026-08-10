@@ -35,7 +35,7 @@
 #include <unistd.h>
 
 #include <canal.h>
-#include <canal_macro.h>
+#include <canal-macro.h>
 #include <vscpremotetcpif.h>
 
 #include "../common/mqttobj.h"

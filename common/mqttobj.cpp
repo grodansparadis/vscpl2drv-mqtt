@@ -48,8 +48,8 @@
 #include <hlo.h>
 #include <remotevariablecodes.h>
 #include <vscp.h>
-#include <vscp_class.h>
-#include <vscp_type.h>
+#include <vscp-class.h>
+#include <vscp-type.h>
 #include <vscphelper.h>
 #include <vscpremotetcpif.h>
 
@@ -631,7 +631,6 @@ startHLOParser(void* data, const char* name, const char** attr)
 
             if (0 == strcasecmp(attr[i], "op")) {
                 if (!attribute.empty()) {
-                    pObj->m_op = vscp_readStringValue(attribute);
                     vscp_makeUpper(attribute);
                     if (attribute == "VSCP-NOOP") {
                         pObj->m_op = HLO_OP_NOOP;
@@ -644,7 +643,7 @@ startHLOParser(void* data, const char* name, const char** attr)
                     } else if (attribute == "VSCP-SAVE") {
                         pObj->m_op = HLO_OP_SAVE;
                     } else {
-                        pObj->m_op = HLO_OP_UNKNOWN;
+                        pObj->m_op.clear();
                     }
                 }
             } else if (0 == strcasecmp(attr[i], "name")) {
@@ -764,71 +763,43 @@ Cmqttobj::handleHLO(vscpEvent* pEvent)
     ex.vscp_type  = VSCP2_TYPE_HLO_COMMAND;
     m_guid.writeGUID(ex.GUID);
 
-    switch (hlo.m_op) {
+    if (hlo.m_op == HLO_OP_NOOP) {
+        snprintf(buf,
+                 sizeof(buf),
+                 "<vscp-cmd op=\"noop\" rv=\"OK\" note=\"NOOP command executed correctly.\"/>");
 
-        case HLO_OP_NOOP:
-            // Send positive response
-            sprintf(buf,
-                    HLO_CMD_REPLY_TEMPLATE,
-                    "noop",
-                    "OK",
-                    "NOOP commaned executed correctly.");
+        memset(ex.data, 0, sizeof(ex.data));
+        ex.sizeData = strlen(buf);
+        memcpy(ex.data, buf, ex.sizeData);
 
-            memset(ex.data, 0, sizeof(ex.data));
-            ex.sizeData = strlen(buf);
-            memcpy(ex.data, buf, ex.sizeData);
-
-            // Put event in receive queue
-            return eventExToReceiveQueue(ex);
-
-        case HLO_OP_READ_VAR:
-            if ("SUNRISE" == hlo.m_name) {
-                /*sprintf(buf,
-                        HLO_READ_VAR_REPLY_TEMPLATE,
-                        "sunrise",
-                        "OK",
-                        VSCP_REMOTE_VARIABLE_CODE_DATETIME,
-                        vscp_convertToBase64(getSunriseTime().getISODateTime())
-                          .c_str());*/
-            } else {
-                sprintf(buf,
-                        HLO_READ_VAR_ERR_REPLY_TEMPLATE,
-                        hlo.m_name.c_str(),
-                        ERR_VARIABLE_UNKNOWN,
-                        vscp_convertToBase64(std::string("Unknown variable"))
-                          .c_str());
-            }
-            break;
-
-        case HLO_OP_WRITE_VAR:
-            if ("SUNRISE" == hlo.m_name) {
-                // Read Only variable
-                sprintf(buf,
-                        HLO_READ_VAR_ERR_REPLY_TEMPLATE,
-                        "sunrise",
-                        VSCP_REMOTE_VARIABLE_CODE_BOOLEAN,
-                        "Variable is read only.");
-            } else {
-                sprintf(buf,
-                        HLO_READ_VAR_ERR_REPLY_TEMPLATE,
-                        hlo.m_name.c_str(),
-                        1,
-                        vscp_convertToBase64(std::string("Unknown variable"))
-                          .c_str());
-            }
-            break;
-
-        case HLO_OP_SAVE:
-            doSaveConfig();
-            break;
-
-        case HLO_OP_LOAD:
-            doLoadConfig();
-            break;
-
-        default:
-            break;
-    };
+        return eventExToReceiveQueue(ex);
+    } else if (hlo.m_op == HLO_OP_READ_VAR) {
+        if ("SUNRISE" != hlo.m_name) {
+            snprintf(buf,
+                     sizeof(buf),
+                     "<vscp-cmd op=\"%s\" rv=\"ERROR\" note=\"%s\"/>",
+                     hlo.m_name.c_str(),
+                     vscp_convertToBase64(std::string("Unknown variable"))
+                       .c_str());
+        }
+    } else if (hlo.m_op == HLO_OP_WRITE_VAR) {
+        if ("SUNRISE" == hlo.m_name) {
+            snprintf(buf,
+                     sizeof(buf),
+                     "<vscp-cmd op=\"sunrise\" rv=\"ERROR\" note=\"Variable is read only.\"/>");
+        } else {
+            snprintf(buf,
+                     sizeof(buf),
+                     "<vscp-cmd op=\"%s\" rv=\"ERROR\" note=\"%s\"/>",
+                     hlo.m_name.c_str(),
+                     vscp_convertToBase64(std::string("Unknown variable"))
+                       .c_str());
+        }
+    } else if (hlo.m_op == HLO_OP_SAVE) {
+        doSaveConfig();
+    } else if (hlo.m_op == HLO_OP_LOAD) {
+        doLoadConfig();
+    }
 
     return true;
 }
