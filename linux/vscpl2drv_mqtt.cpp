@@ -29,10 +29,9 @@
 #include <string>
 
 #include <pthread.h>
-#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <cerrno>
 
 #include <canal.h>
 #include <canal-macro.h>
@@ -42,59 +41,29 @@
 #include "../common/mqttobj.h"
 #include "vscpl2drv_mqtt.h"
 
-void
-_init() __attribute__((constructor));
-void
-_fini() __attribute__((destructor));
-
 // This map holds driver handles/objects
 static std::map<long, Cmqttobj*> g_ifMap;
 
 // Mutex for the map object
-static pthread_mutex_t g_mapMutex;
+static pthread_mutex_t g_mapMutex = PTHREAD_MUTEX_INITIALIZER;
 
-////////////////////////////////////////////////////////////////////////////
-// DLL constructor
-//
-
-void
-_init()
+class DriverObjectCleanup
 {
-    pthread_mutex_init(&g_mapMutex, NULL);
-}
-
-////////////////////////////////////////////////////////////////////////////
-// DLL destructor
-//
-
-void
-_fini()
-{
-    // If empty - nothing to do
-    if (g_ifMap.empty())
-        return;
-
-    // Remove orphan objects
-
-    LOCK_MUTEX(g_mapMutex);
-
-    for (std::map<long, Cmqttobj*>::iterator it = g_ifMap.begin();
-         it != g_ifMap.end();
-         ++it) {
-        // std::cout << it->first << " => " << it->second << '\n';
-
-        Cmqttobj* pif = it->second;
-        if (NULL != pif) {
-            delete pif;
-            pif = NULL;
+  public:
+    ~DriverObjectCleanup()
+    {
+        pthread_mutex_lock(&g_mapMutex);
+        for (std::map<long, Cmqttobj*>::iterator it = g_ifMap.begin();
+             it != g_ifMap.end();
+             ++it) {
+            delete it->second;
         }
+        g_ifMap.clear();
+        pthread_mutex_unlock(&g_mapMutex);
     }
+};
 
-    g_ifMap.clear(); // Remove all items
-
-    UNLOCK_MUTEX(g_mapMutex);
-    pthread_mutex_destroy(&g_mapMutex);
-}
+static DriverObjectCleanup g_driverObjectCleanup;
 
 ///////////////////////////////////////////////////////////////////////////////
 // addDriverObject
@@ -106,7 +75,7 @@ addDriverObject(Cmqttobj* pif)
     std::map<long, Cmqttobj*>::iterator it;
     long h = 0;
 
-    LOCK_MUTEX(g_mapMutex);
+    pthread_mutex_lock(&g_mapMutex);
 
     // Find free handle
     while (true) {
@@ -118,7 +87,7 @@ addDriverObject(Cmqttobj* pif)
     g_ifMap[h] = pif;
     h += 1681;
 
-    UNLOCK_MUTEX(g_mapMutex);
+    pthread_mutex_unlock(&g_mapMutex);
 
     return h;
 }
@@ -159,7 +128,7 @@ removeDriverObject(long h)
     if (idx < 0)
         return;
 
-    LOCK_MUTEX(g_mapMutex);
+    pthread_mutex_lock(&g_mapMutex);
     it = g_ifMap.find(idx);
     if (it != g_ifMap.end()) {
         Cmqttobj* pObj = it->second;
@@ -169,7 +138,7 @@ removeDriverObject(long h)
         }
         g_ifMap.erase(it);
     }
-    UNLOCK_MUTEX(g_mapMutex);
+    pthread_mutex_unlock(&g_mapMutex);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -251,34 +220,7 @@ VSCPRead(long handle, vscpEvent* pEvent, unsigned long timeout)
         return CANAL_ERROR_MEMORY;
 
     int rv;
-#ifdef __APPLE__
-    // macOS does not have sem_timedwait; poll with sem_trywait instead
-    {
-        unsigned long elapsed_us = 0;
-        const unsigned long timeout_us = timeout; // timeout is already in µs
-        const unsigned long sleep_us = 1000;      // sleep 1 ms per iteration
-        rv = -1;
-        while (elapsed_us < timeout_us) {
-            rv = sem_trywait(&pdrvObj->m_semReceiveQueue);
-            if (rv == 0)
-                break;
-            if (errno != EAGAIN) {
-                break;
-            }
-            usleep(sleep_us);
-            elapsed_us += sleep_us;
-        }
-        if (rv == -1 && errno == EAGAIN) {
-            errno = ETIMEDOUT;
-        }
-    }
-#else
-    struct timespec ts;
-    unsigned long timeout_ns = timeout * 1000UL;
-    ts.tv_sec  = timeout_ns / 1000000000UL;
-    ts.tv_nsec = timeout_ns % 1000000000UL;
-    rv = sem_timedwait(&pdrvObj->m_semReceiveQueue, &ts);
-#endif
+    rv = pdrvObj->m_semReceiveQueue.waitFor(timeout);
     if (-1 == rv) {
         if (ETIMEDOUT == errno) {
             return CANAL_ERROR_TIMEOUT;

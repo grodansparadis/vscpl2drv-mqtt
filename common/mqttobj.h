@@ -24,17 +24,20 @@
 #if !defined(_VSCPMQTT_H__INCLUDED_)
 #define _VSCPMQTT_H__INCLUDED_
 
+#ifdef WIN32
+#include <pch.h>
+#endif
+
 #include <list>
 #include <string>
+#include <chrono>
+#include <cerrno>
 
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 
-#define _POSIX
 #include <pthread.h>
-#include <syslog.h>
-#include <unistd.h>
 
 #include <canal.h>
 #include <canal-macro.h>
@@ -47,6 +50,81 @@
 class CWrkThread;
 class Cmqtt;
 class CWrkThreadObj;
+
+class CDriverSemaphore
+{
+  public:
+    explicit CDriverSemaphore(unsigned int initialCount = 0)
+        : m_count(initialCount)
+    {
+        pthread_mutex_init(&m_mutex, NULL);
+        pthread_cond_init(&m_condition, NULL);
+    }
+
+    ~CDriverSemaphore()
+    {
+        pthread_cond_destroy(&m_condition);
+        pthread_mutex_destroy(&m_mutex);
+    }
+
+    CDriverSemaphore(const CDriverSemaphore&) = delete;
+    CDriverSemaphore& operator=(const CDriverSemaphore&) = delete;
+
+    void post()
+    {
+        pthread_mutex_lock(&m_mutex);
+        ++m_count;
+        pthread_cond_signal(&m_condition);
+        pthread_mutex_unlock(&m_mutex);
+    }
+
+    int tryWait()
+    {
+        pthread_mutex_lock(&m_mutex);
+        if (m_count > 0) {
+            --m_count;
+            pthread_mutex_unlock(&m_mutex);
+            return 0;
+        }
+        pthread_mutex_unlock(&m_mutex);
+        errno = EAGAIN;
+        return -1;
+    }
+
+    int waitFor(unsigned long timeoutMicroseconds)
+    {
+        using namespace std::chrono;
+        const system_clock::time_point deadline =
+          system_clock::now() + microseconds(timeoutMicroseconds);
+        const seconds deadlineSeconds =
+          duration_cast<seconds>(deadline.time_since_epoch());
+        const nanoseconds deadlineNanoseconds =
+          duration_cast<nanoseconds>(deadline.time_since_epoch() -
+                                     deadlineSeconds);
+        struct timespec timeout;
+        timeout.tv_sec  = static_cast<time_t>(deadlineSeconds.count());
+        timeout.tv_nsec = static_cast<long>(deadlineNanoseconds.count());
+
+        pthread_mutex_lock(&m_mutex);
+        while (m_count == 0) {
+            const int result =
+              pthread_cond_timedwait(&m_condition, &m_mutex, &timeout);
+            if (result != 0) {
+                pthread_mutex_unlock(&m_mutex);
+                errno = result;
+                return -1;
+            }
+        }
+        --m_count;
+        pthread_mutex_unlock(&m_mutex);
+        return 0;
+    }
+
+  private:
+    pthread_mutex_t m_mutex;
+    pthread_cond_t m_condition;
+    unsigned int m_count;
+};
 
 // Connection types
 #define VSCP_MQTT_TYPE_UNKNOWN 0
@@ -281,8 +359,8 @@ class Cmqttobj
     /*!
         Event object to indicate that there is an event in the output queue
     */
-    sem_t m_semSendQueue;
-    sem_t m_semReceiveQueue;
+    CDriverSemaphore m_semSendQueue;
+    CDriverSemaphore m_semReceiveQueue;
 
     // Mutex to protect the output queue
     pthread_mutex_t m_mutexSendQueue;

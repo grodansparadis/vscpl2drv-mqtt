@@ -25,14 +25,11 @@
 #if !defined(VSCPL2_H__A388C093_AD35_4672_8BF7_DBC702C6B0C8__INCLUDED_)
 #define VSCPL2_H__A388C093_AD35_4672_8BF7_DBC702C6B0C8__INCLUDED_
 
-#define _POSIX
-
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#include <unistd.h>
 
 #include <canal.h>
 #include <canal-macro.h>
@@ -60,6 +57,12 @@ typedef int BOOL;
 // This is the vendor string - Change to your own value
 #define VSCP_DLL_VENDOR                                                        \
     "Grodans Paradis AB, Sweden, https://www.grodansparadis.com"
+
+#if defined(_WIN32)
+#define VSCP_DLL_EXPORT __declspec(dllexport)
+#else
+#define VSCP_DLL_EXPORT
+#endif
 
 // Driver information.
 #define VSCP_MQTT_DRIVERINFO                                                   \
@@ -97,5 +100,28 @@ getDriverObject(long handle);
 */
 void
 removeDriverObject(long handle);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+VSCP_DLL_EXPORT long
+VSCPOpen(const char* pathConfig, const char* guid);
+
+VSCP_DLL_EXPORT int
+VSCPClose(long handle);
+
+VSCP_DLL_EXPORT int
+VSCPWrite(long handle, const vscpEvent* event, unsigned long timeout);
+
+VSCP_DLL_EXPORT int
+VSCPRead(long handle, vscpEvent* event, unsigned long timeout);
+
+VSCP_DLL_EXPORT unsigned long
+VSCPGetVersion(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // !defined(VSCPL2_H__A388C093_AD35_4672_8BF7_DBC702C6B0C8__INCLUDED_)

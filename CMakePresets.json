@@ -34,12 +34,13 @@
         {
             "name": "windows-debug",
             "displayName": "Windows Debug",
-            "description": "Debug build for Windows using Visual Studio",
-            "generator": "Visual Studio 17 2022",
-            "architecture": "x64",
+            "description": "Debug build for Windows using the active MSYS2 MinGW toolchain",
+            "generator": "Ninja",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++"
             },
             "condition": {
                 "type": "equals",
@@ -50,12 +51,13 @@
         {
             "name": "windows-release",
             "displayName": "Windows Release",
-            "description": "Release build for Windows using Visual Studio",
-            "generator": "Visual Studio 17 2022",
-            "architecture": "x64",
+            "description": "Release build for Windows using the active MSYS2 MinGW toolchain",
+            "generator": "Ninja",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++"
             },
             "condition": {
                 "type": "equals",

@@ -12,22 +12,23 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Linux build
-            os: ubuntu-latest
+          - name: Linux x86_64
+            os: ubuntu-24.04
             preset: linux-release
-            build: true
-          - name: macOS build
-            os: macos-latest
+            artifact: linux-x86_64
+          - name: macOS arm64
+            os: macos-15
             preset: macos-release
-            build: true
-          - name: Windows configure
-            os: windows-latest
-            preset: windows-release
-            build: false
+            artifact: macos-arm64
+          - name: macOS x86_64
+            os: macos-15-intel
+            preset: macos-release
+            artifact: macos-x86_64
 
     steps:
       - name: Check out source
@@ -45,31 +46,167 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install expat mosquitto openssl@3
 
-      - name: Install Windows dependencies
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: vcpkg install expat:x64-windows mosquitto:x64-windows openssl:x64-windows
-
       - name: Configure Linux
         if: runner.os == 'Linux'
-        run: cmake --preset ${{ matrix.preset }}
+        run: cmake --preset "${{ matrix.preset }}" -DCMAKE_INSTALL_LIBDIR=lib
 
       - name: Configure macOS
         if: runner.os == 'macOS'
         run: >-
-          cmake --preset ${{ matrix.preset }}
+          cmake --preset "${{ matrix.preset }}"
+          -DCMAKE_INSTALL_LIBDIR=lib
           -DCMAKE_PREFIX_PATH="$(brew --prefix expat);$(brew --prefix mosquitto);$(brew --prefix openssl@3)"
 
-      - name: Configure Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: cmake --preset ${{ matrix.preset }} -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-
       - name: Build
-        if: matrix.build
-        run: cmake --build --preset ${{ matrix.preset }} --target vscpl2drv_mqtt
+        run: cmake --build --preset "${{ matrix.preset }}" --target vscpl2drv_mqtt vscpl2drv_mqtt_semaphore_test --parallel 2
 
-      - name: Explain Windows coverage
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Write-Output "Windows CI validates dependency discovery and CMake generation; the driver implementation is currently POSIX-only."
+      - name: Test portable semaphore
+        run: ctest --test-dir build --output-on-failure --timeout 20 -R "^driver-semaphore$" --no-tests=error
+
+      - name: Stage and smoke-test driver
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --install build --prefix "$PWD/stage"
+          cp LICENSE README.md stage/
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            driver="$PWD/stage/lib/libvscpl2drv-mqtt.dylib"
+            cc ci/check-driver.c -o build/check-driver
+          else
+            driver="$PWD/stage/lib/libvscpl2drv-mqtt.so"
+            cc ci/check-driver.c -o build/check-driver -ldl
+          fi
+          test -s "$driver"
+          file "$driver"
+          build/check-driver "$driver"
+          tar -czf "vscpl2drv-mqtt-${{ matrix.artifact }}.tar.gz" -C stage .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscpl2drv-mqtt-${{ matrix.artifact }}
+          path: vscpl2drv-mqtt-${{ matrix.artifact }}.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  windows:
+    name: Windows x86_64
+    runs-on: windows-2022
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install native Windows toolchain
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-expat
+            mingw-w64-ucrt-x86_64-mosquitto
+            mingw-w64-ucrt-x86_64-openssl
+
+      - name: Configure and build
+        run: |
+          cmake --preset windows-release
+          cmake --build --preset windows-release --target vscpl2drv_mqtt vscpl2drv_mqtt_semaphore_test --parallel 2
+          ctest --test-dir build --output-on-failure --timeout 20 -R "^driver-semaphore$" --no-tests=error
+
+      - name: Stage and smoke-test native DLL
+        run: |
+          set -euo pipefail
+          cmake --install build --prefix "$PWD/stage"
+          cp LICENSE README.md stage/
+          test -s stage/bin/vscpl2drv-mqtt.dll
+          for dll in stage/bin/*.dll; do
+            runtime="$MINGW_PREFIX/bin/$(basename "$dll")"
+            if [[ -f "$runtime" ]]; then
+              package=$(pacman -Qqo "$runtime")
+              pacman -Qlq "$package" > build/runtime-package-files
+              while IFS= read -r license; do
+                if [[ "$license" == "$MINGW_PREFIX/share/licenses/"* && -f "$license" ]]; then
+                  relative="${license#"$MINGW_PREFIX/share/licenses/"}"
+                  install -Dm644 "$license" "stage/licenses/$relative"
+                fi
+              done < build/runtime-package-files
+            fi
+          done
+          gcc ci/check-driver.c -o build/check-driver.exe
+          PATH=/usr/bin build/check-driver.exe "$(cygpath -w "$PWD/stage/bin/vscpl2drv-mqtt.dll")"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscpl2drv-mqtt-windows-x86_64
+          path: stage/
+          if-no-files-found: error
+          retention-days: 30
+
+  raspberry-pi:
+    name: Raspberry Pi ${{ matrix.arch }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            platform: linux/arm64
+            elf: aarch64
+          - arch: armhf
+            platform: linux/arm/v7
+            elf: ARM
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Enable ARM emulation
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: arm64,arm
+
+      - name: Build, stage and smoke-test on Debian Bookworm
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          EXPECTED_ELF: ${{ matrix.elf }}
+          ARTIFACT: vscpl2drv-mqtt-raspberry-pi-${{ matrix.arch }}
+        run: |
+          docker run --rm --platform "$PLATFORM" \
+            -e EXPECTED_ELF -e ARTIFACT \
+            -v "$PWD:/src" -w /src debian:bookworm bash -euo pipefail -c '
+              apt-get update
+              apt-get install --yes --no-install-recommends \
+                build-essential cmake file \
+                libexpat1-dev libmosquitto-dev libssl-dev
+              cmake --preset linux-release -DCMAKE_INSTALL_LIBDIR=lib
+              cmake --build --preset linux-release --target vscpl2drv_mqtt vscpl2drv_mqtt_semaphore_test --parallel 2
+              ctest --test-dir build --output-on-failure --timeout 20 -R "^driver-semaphore$" --no-tests=error
+              cmake --install build --prefix /src/stage
+              cp LICENSE README.md stage/
+              driver=/src/stage/lib/libvscpl2drv-mqtt.so
+              test -s "$driver"
+              file -L "$driver" | tee /tmp/driver-architecture
+              grep -F "$EXPECTED_ELF" /tmp/driver-architecture
+              cc ci/check-driver.c -o build/check-driver -ldl
+              build/check-driver "$driver"
+              tar -czf "$ARTIFACT.tar.gz" -C stage .
+            '
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscpl2drv-mqtt-raspberry-pi-${{ matrix.arch }}
+          path: vscpl2drv-mqtt-raspberry-pi-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+          retention-days: 30

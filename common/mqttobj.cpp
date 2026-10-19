@@ -25,22 +25,18 @@
 #include <map>
 #include <string>
 
-#include "limits.h"
-#include "stdlib.h"
-#include "syslog.h"
-#include "unistd.h"
-#include <ctype.h>
-#include <libgen.h>
-#include <net/if.h>
-#include <signal.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <time.h>
+#include <cerrno>
+#include <chrono>
+#include <cstring>
+#include <thread>
+
+#include <syslog.h>
+
+#if defined(_WIN32)
+#define strcasecmp _stricmp
+#else
+#include <strings.h>
+#endif
 
 #include <expat.h>
 #include <mosquitto.h>
@@ -107,9 +103,6 @@ Cmqttobj::Cmqttobj()
     vscp_clearVSCPFilter(&m_vscpfilterRx); // Accept all RX events
     vscp_clearVSCPFilter(&m_vscpfilterTx); // Accept all TX events
 
-    sem_init(&m_semSendQueue, 0, 0);
-    sem_init(&m_semReceiveQueue, 0, 0);
-
     pthread_mutex_init(&m_mutexSendQueue, NULL);
     pthread_mutex_init(&m_mutexReceiveQueue, NULL);
 }
@@ -124,9 +117,6 @@ Cmqttobj::~Cmqttobj()
 
     pthread_mutex_destroy(&m_mutexSendQueue);
     pthread_mutex_destroy(&m_mutexReceiveQueue);
-
-    sem_destroy(&m_semSendQueue);
-    sem_destroy(&m_semReceiveQueue);
 
     mosquitto_lib_cleanup();
 }
@@ -545,7 +535,7 @@ Cmqttobj::close(void)
                 syslog(
                   LOG_ERR,
                   "[vscpl2drv-mqtt] workerthread is not a joinable thread.");
-                sleep(1); // Wait instead
+                std::this_thread::sleep_for(std::chrono::seconds(1));
                 break;
 
             case ESRCH:
@@ -822,7 +812,7 @@ Cmqttobj::eventExToReceiveQueue(vscpEventEx& ex)
         if (vscp_doLevel2Filter(pev, &m_vscpfilterRx)) {
             pthread_mutex_lock(&m_mutexReceiveQueue);
             m_receiveList.push_back(pev);
-            sem_post(&m_semReceiveQueue);
+            m_semReceiveQueue.post();
             pthread_mutex_unlock(&m_mutexReceiveQueue);
         } else {
             vscp_deleteEvent(pev);
@@ -842,7 +832,7 @@ Cmqttobj::addEvent2SendQueue(const vscpEvent* pEvent)
 {
     pthread_mutex_lock(&m_mutexSendQueue);
     m_sendList.push_back((vscpEvent*)pEvent);
-    sem_post(&m_semSendQueue);
+    m_semSendQueue.post();
     pthread_mutex_unlock(&m_mutexSendQueue);
     return true;
 }
@@ -856,7 +846,7 @@ Cmqttobj::addEvent2ReceiveQueue(const vscpEvent* pEvent)
 {
     pthread_mutex_lock(&m_mutexReceiveQueue);
     m_receiveList.push_back((vscpEvent*)pEvent);
-    sem_post(&m_semReceiveQueue);
+    m_semReceiveQueue.post();
     pthread_mutex_unlock(&m_mutexReceiveQueue);
     return true;
 }
@@ -1471,13 +1461,12 @@ workerThread(void* pData)
                 return NULL;
 
             case MOSQ_ERR_ERRNO:
-                char errbuf[128];
                 syslog(
                   LOG_ERR,
                   "[vscpl2drv-mqtt] A system call returned an error. [%d %s] "
                   "Terminating",
                   errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  std::strerror(errno));
                 mosquitto_destroy(mosq);
                 return NULL;
         }
@@ -1614,12 +1603,11 @@ workerThread(void* pData)
                         break;
 
                     case MOSQ_ERR_ERRNO:
-                        char buf[128];
                         syslog(LOG_ERR,
                                "[vscpl2drv-mqtt] A systemcall returned "
                                "an error [%d] %s",
                                errno,
-                               strerror_r(errno, buf, sizeof(buf)));
+                               std::strerror(errno));
                         pObj->m_bQuit = true;
                         break;
                 }
@@ -1752,21 +1740,17 @@ workerThread(void* pData)
                         break;
 
                     case MOSQ_ERR_ERRNO:
-                        char buf[128];
                         syslog(LOG_ERR,
                                "[vscpl2drv-mqtt] A systemcall returned "
                                "an error [%d] %s",
                                errno,
-                               strerror_r(errno, buf, sizeof(buf)));
+                               std::strerror(errno));
                         pObj->m_bQuit = true;
                         break;
                 }
             }
 
-            struct timespec ts;
-            ts.tv_sec  = 0;
-            ts.tv_nsec = 10000; // 10 ms
-            if (ETIMEDOUT == sem_timedwait(&pObj->m_semSendQueue, &ts)) {
+            if (0 != pObj->m_semSendQueue.waitFor(10000)) {
                 continue;
             }
 

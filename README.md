@@ -12,7 +12,65 @@ MQTT provides a lightweight method of carrying out messaging using a publish/sub
 
 sudo apt install libmosquitto-dev libexpat1-dev libssl-dev
 
+## CI artifacts
+
+The [CI workflow](.github/workflows/ci.yml) runs on pushes, pull requests, and
+manual dispatches. Download the artifacts from the completed run's **Artifacts**
+section in GitHub Actions. Each artifact contains a Release build, the license,
+and this README (no private keys).
+
+| Artifact | Target | Driver |
+| --- | --- | --- |
+| `vscpl2drv-mqtt-linux-x86_64` | Ubuntu 24.04, x86_64 | `lib/libvscpl2drv-mqtt.so` |
+| `vscpl2drv-mqtt-macos-arm64` | macOS 15, Apple Silicon | `lib/libvscpl2drv-mqtt.dylib` |
+| `vscpl2drv-mqtt-macos-x86_64` | macOS 15, Intel | `lib/libvscpl2drv-mqtt.dylib` |
+| `vscpl2drv-mqtt-windows-x86_64` | Windows x64, native MinGW-w64/UCRT | `bin/vscpl2drv-mqtt.dll` |
+| `vscpl2drv-mqtt-raspberry-pi-arm64` | 64-bit Raspberry Pi OS Bookworm or newer | `lib/libvscpl2drv-mqtt.so` |
+| `vscpl2drv-mqtt-raspberry-pi-armhf` | 32-bit Raspberry Pi OS Bookworm or newer, ARMv7+ | `lib/libvscpl2drv-mqtt.so` |
+
+Unix artifacts contain a tar archive to preserve the versioned library symlinks.
+Windows artifacts contain the DLL and its non-system runtime DLLs; keep those
+DLLs together when deploying. They do not require an MSYS2 or Cygwin installation
+at runtime. Artifacts are retained for 30 days.
+
+Linux and Raspberry Pi packages use system Mosquitto, Expat, and OpenSSL libraries.
+On the target system, install `libmosquitto1`, `libexpat1`, and `libssl3` (or the
+corresponding compatible packages for your distribution). macOS builds use
+Homebrew libraries: install `mosquitto`, `expat`, and `openssl@3` on the target Mac.
+These are build artifacts, not Debian packages or self-contained macOS bundles.
+
+The Raspberry Pi jobs compile and load-test inside QEMU-emulated Debian Bookworm
+ARM containers. The ARMHF build targets ARMv7 hard-float; it does **not** support
+ARMv6 devices such as the original Pi 1 and Pi Zero/Zero W. Use the ARM64 artifact
+with a 64-bit OS and the ARMHF artifact with a 32-bit OS. These jobs do not test
+physical Raspberry Pi hardware or a live MQTT broker.
+
+Every job installs into a staging directory, loads the resulting library, and
+checks all five Level II API exports before uploading. A missing binary, unresolved
+dependency, or missing API export fails the job instead of producing an empty
+artifact.
+
 ## Build
+
+### Native Windows (MSYS2 UCRT64)
+
+Use an [MSYS2 UCRT64 shell](https://www.msys2.org/) with these packages:
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-gcc \
+  mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja \
+  mingw-w64-ucrt-x86_64-expat mingw-w64-ucrt-x86_64-mosquitto \
+  mingw-w64-ucrt-x86_64-openssl
+git submodule update --init --recursive
+cmake --preset windows-release
+cmake --build --preset windows-release --target vscpl2drv_mqtt
+cmake --install build --prefix "$PWD/stage"
+```
+
+Deploy the driver and runtime DLLs from `stage/bin` together. The legacy
+Visual Studio/wxWidgets project is not used by CI.
+
+### Autotools (legacy)
 
 Checkout with
 

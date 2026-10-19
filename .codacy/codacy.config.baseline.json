@@ -1,0 +1,2223 @@
+{
+  "version": 1,
+  "metadata": {
+    "source": "auto",
+    "provider": null,
+    "organization": null,
+    "repositoryId": null,
+    "repositoryName": null,
+    "createdAt": "2026-10-19T11:26:37.271Z",
+    "updatedAt": "2026-10-19T11:26:37.271Z",
+    "languages": [
+      "C",
+      "CPP",
+      "CSS",
+      "HTML",
+      "JSON",
+      "Javascript",
+      "Markdown",
+      "Shell",
+      "XML",
+      "YAML"
+    ]
+  },
+  "tools": [
+    {
+      "toolId": "jackson",
+      "patterns": [
+        {
+          "patternId": "jackson_duplicate-keys"
+        },
+        {
+          "patternId": "jackson_parse-error"
+        }
+      ]
+    },
+    {
+      "toolId": "markdownlint",
+      "patterns": [
+        {
+          "patternId": "markdownlint_MD001"
+        },
+        {
+          "patternId": "markdownlint_MD003"
+        },
+        {
+          "patternId": "markdownlint_MD004"
+        },
+        {
+          "patternId": "markdownlint_MD005"
+        },
+        {
+          "patternId": "markdownlint_MD007"
+        },
+        {
+          "patternId": "markdownlint_MD010"
+        },
+        {
+          "patternId": "markdownlint_MD011"
+        },
+        {
+          "patternId": "markdownlint_MD012"
+        },
+        {
+          "patternId": "markdownlint_MD014"
+        },
+        {
+          "patternId": "markdownlint_MD018"
+        },
+        {
+          "patternId": "markdownlint_MD019"
+        },
+        {
+          "patternId": "markdownlint_MD020"
+        },
+        {
+          "patternId": "markdownlint_MD021"
+        },
+        {
+          "patternId": "markdownlint_MD022"
+        },
+        {
+          "patternId": "markdownlint_MD023"
+        },
+        {
+          "patternId": "markdownlint_MD024"
+        },
+        {
+          "patternId": "markdownlint_MD025"
+        },
+        {
+          "patternId": "markdownlint_MD026"
+        },
+        {
+          "patternId": "markdownlint_MD027"
+        },
+        {
+          "patternId": "markdownlint_MD028"
+        },
+        {
+          "patternId": "markdownlint_MD029"
+        },
+        {
+          "patternId": "markdownlint_MD030"
+        },
+        {
+          "patternId": "markdownlint_MD032"
+        },
+        {
+          "patternId": "markdownlint_MD033"
+        },
+        {
+          "patternId": "markdownlint_MD034"
+        },
+        {
+          "patternId": "markdownlint_MD035"
+        },
+        {
+          "patternId": "markdownlint_MD036"
+        },
+        {
+          "patternId": "markdownlint_MD037"
+        },
+        {
+          "patternId": "markdownlint_MD038"
+        },
+        {
+          "patternId": "markdownlint_MD039"
+        },
+        {
+          "patternId": "markdownlint_MD042"
+        },
+        {
+          "patternId": "markdownlint_MD044"
+        },
+        {
+          "patternId": "markdownlint_MD045"
+        },
+        {
+          "patternId": "markdownlint_MD046"
+        },
+        {
+          "patternId": "markdownlint_MD048"
+        },
+        {
+          "patternId": "markdownlint_MD049"
+        },
+        {
+          "patternId": "markdownlint_MD050"
+        },
+        {
+          "patternId": "markdownlint_MD051"
+        },
+        {
+          "patternId": "markdownlint_MD052"
+        },
+        {
+          "patternId": "markdownlint_MD053"
+        },
+        {
+          "patternId": "markdownlint_MD054"
+        },
+        {
+          "patternId": "markdownlint_MD055"
+        },
+        {
+          "patternId": "markdownlint_MD056"
+        }
+      ]
+    },
+    {
+      "toolId": "shellcheck",
+      "patterns": [
+        {
+          "patternId": "shellcheck_SC2001"
+        },
+        {
+          "patternId": "shellcheck_SC2002"
+        },
+        {
+          "patternId": "shellcheck_SC2003"
+        },
+        {
+          "patternId": "shellcheck_SC2004"
+        },
+        {
+          "patternId": "shellcheck_SC2006"
+        },
+        {
+          "patternId": "shellcheck_SC2015"
+        },
+        {
+          "patternId": "shellcheck_SC2016"
+        },
+        {
+          "patternId": "shellcheck_SC2020"
+        },
+        {
+          "patternId": "shellcheck_SC2022"
+        },
+        {
+          "patternId": "shellcheck_SC2024"
+        },
+        {
+          "patternId": "shellcheck_SC2025"
+        },
+        {
+          "patternId": "shellcheck_SC2026"
+        },
+        {
+          "patternId": "shellcheck_SC2027"
+        },
+        {
+          "patternId": "shellcheck_SC2028"
+        },
+        {
+          "patternId": "shellcheck_SC2029"
+        },
+        {
+          "patternId": "shellcheck_SC2031"
+        },
+        {
+          "patternId": "shellcheck_SC2033"
+        },
+        {
+          "patternId": "shellcheck_SC2034"
+        },
+        {
+          "patternId": "shellcheck_SC2035"
+        },
+        {
+          "patternId": "shellcheck_SC2036"
+        },
+        {
+          "patternId": "shellcheck_SC2086"
+        },
+        {
+          "patternId": "shellcheck_SC2148"
+        }
+      ]
+    },
+    {
+      "toolId": "cppcheck",
+      "patterns": [
+        {
+          "patternId": "cppcheck_arithOperationsOnVoidPointer"
+        },
+        {
+          "patternId": "cppcheck_arrayIndexOutOfBounds"
+        },
+        {
+          "patternId": "cppcheck_arrayIndexOutOfBoundsCond"
+        },
+        {
+          "patternId": "cppcheck_arrayIndexThenCheck"
+        },
+        {
+          "patternId": "cppcheck_assertWithSideEffect"
+        },
+        {
+          "patternId": "cppcheck_assignBoolToPointer"
+        },
+        {
+          "patternId": "cppcheck_assignIfError"
+        },
+        {
+          "patternId": "cppcheck_AssignmentAddressToInteger"
+        },
+        {
+          "patternId": "cppcheck_assignmentInAssert"
+        },
+        {
+          "patternId": "cppcheck_AssignmentIntegerToAddress"
+        },
+        {
+          "patternId": "cppcheck_autoVariables"
+        },
+        {
+          "patternId": "cppcheck_autovarInvalidDeallocation"
+        },
+        {
+          "patternId": "cppcheck_badBitmaskCheck"
+        },
+        {
+          "patternId": "cppcheck_bufferAccessOutOfBounds"
+        },
+        {
+          "patternId": "cppcheck_CastAddressToIntegerAtReturn"
+        },
+        {
+          "patternId": "cppcheck_CastIntegerToAddressAtReturn"
+        },
+        {
+          "patternId": "cppcheck_catchExceptionByValue"
+        },
+        {
+          "patternId": "cppcheck_charBitOp"
+        },
+        {
+          "patternId": "cppcheck_charLiteralWithCharPtrCompare"
+        },
+        {
+          "patternId": "cppcheck_checkCastIntToCharAndBack"
+        },
+        {
+          "patternId": "cppcheck_clarifyCalculation"
+        },
+        {
+          "patternId": "cppcheck_clarifyCondition"
+        },
+        {
+          "patternId": "cppcheck_clarifyStatement"
+        },
+        {
+          "patternId": "cppcheck_commaSeparatedReturn"
+        },
+        {
+          "patternId": "cppcheck_compareBoolExpressionWithInt"
+        },
+        {
+          "patternId": "cppcheck_comparisonError"
+        },
+        {
+          "patternId": "cppcheck_comparisonFunctionIsAlwaysTrueOrFalse"
+        },
+        {
+          "patternId": "cppcheck_comparisonOfBoolWithBoolError"
+        },
+        {
+          "patternId": "cppcheck_comparisonOfFuncReturningBoolError"
+        },
+        {
+          "patternId": "cppcheck_comparisonOfTwoFuncsReturningBoolError"
+        },
+        {
+          "patternId": "cppcheck_constStatement"
+        },
+        {
+          "patternId": "cppcheck_copyCtorPointerCopying"
+        },
+        {
+          "patternId": "cppcheck_coutCerrMisusage"
+        },
+        {
+          "patternId": "cppcheck_cstyleCast"
+        },
+        {
+          "patternId": "cppcheck_deallocret"
+        },
+        {
+          "patternId": "cppcheck_deallocuse"
+        },
+        {
+          "patternId": "cppcheck_derefInvalidIterator"
+        },
+        {
+          "patternId": "cppcheck_doubleFree"
+        },
+        {
+          "patternId": "cppcheck_duplicateBreak"
+        },
+        {
+          "patternId": "cppcheck_duplicateExpression"
+        },
+        {
+          "patternId": "cppcheck_duplicateExpressionTernary"
+        },
+        {
+          "patternId": "cppcheck_duplInheritedMember"
+        },
+        {
+          "patternId": "cppcheck_eraseDereference"
+        },
+        {
+          "patternId": "cppcheck_exceptDeallocThrow"
+        },
+        {
+          "patternId": "cppcheck_exceptRethrowCopy"
+        },
+        {
+          "patternId": "cppcheck_exceptThrowInDestructor"
+        },
+        {
+          "patternId": "cppcheck_fflushOnInputStream"
+        },
+        {
+          "patternId": "cppcheck_ignoredReturnValue"
+        },
+        {
+          "patternId": "cppcheck_incorrectLogicOperator"
+        },
+        {
+          "patternId": "cppcheck_incorrectStringBooleanError"
+        },
+        {
+          "patternId": "cppcheck_incorrectStringCompare"
+        },
+        {
+          "patternId": "cppcheck_incrementboolean"
+        },
+        {
+          "patternId": "cppcheck_integerOverflow"
+        },
+        {
+          "patternId": "cppcheck_invalidFunctionArg"
+        },
+        {
+          "patternId": "cppcheck_invalidFunctionArgBool"
+        },
+        {
+          "patternId": "cppcheck_invalidIterator1"
+        },
+        {
+          "patternId": "cppcheck_invalidLengthModifierError"
+        },
+        {
+          "patternId": "cppcheck_invalidPointerCast"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_float"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_n"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_p"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_s"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_sint"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_uint"
+        },
+        {
+          "patternId": "cppcheck_invalidscanf"
+        },
+        {
+          "patternId": "cppcheck_invalidScanfArgType_float"
+        },
+        {
+          "patternId": "cppcheck_invalidScanfArgType_int"
+        },
+        {
+          "patternId": "cppcheck_invalidScanfArgType_s"
+        },
+        {
+          "patternId": "cppcheck_invalidScanfFormatWidth"
+        },
+        {
+          "patternId": "cppcheck_IOWithoutPositioning"
+        },
+        {
+          "patternId": "cppcheck_knownConditionTrueFalse"
+        },
+        {
+          "patternId": "cppcheck_leakNoVarFunctionCall"
+        },
+        {
+          "patternId": "cppcheck_leakReturnValNotUsed"
+        },
+        {
+          "patternId": "cppcheck_literalWithCharPtrCompare"
+        },
+        {
+          "patternId": "cppcheck_mallocOnClassError"
+        },
+        {
+          "patternId": "cppcheck_mallocOnClassWarning"
+        },
+        {
+          "patternId": "cppcheck_memleak"
+        },
+        {
+          "patternId": "cppcheck_memleakOnRealloc"
+        },
+        {
+          "patternId": "cppcheck_memsetClass"
+        },
+        {
+          "patternId": "cppcheck_memsetClassFloat"
+        },
+        {
+          "patternId": "cppcheck_memsetClassReference"
+        },
+        {
+          "patternId": "cppcheck_memsetFloat"
+        },
+        {
+          "patternId": "cppcheck_memsetValueOutOfRange"
+        },
+        {
+          "patternId": "cppcheck_memsetZeroBytes"
+        },
+        {
+          "patternId": "cppcheck_mismatchAllocDealloc"
+        },
+        {
+          "patternId": "cppcheck_mismatchingBitAnd"
+        },
+        {
+          "patternId": "cppcheck_mismatchingContainers"
+        },
+        {
+          "patternId": "cppcheck_missingInclude"
+        },
+        {
+          "patternId": "cppcheck_missingIncludeSystem"
+        },
+        {
+          "patternId": "cppcheck_moduloAlwaysTrueFalse"
+        },
+        {
+          "patternId": "cppcheck_multiCondition"
+        },
+        {
+          "patternId": "cppcheck_nanInArithmeticExpression"
+        },
+        {
+          "patternId": "cppcheck_negativeIndex"
+        },
+        {
+          "patternId": "cppcheck_noConstructor"
+        },
+        {
+          "patternId": "cppcheck_noCopyConstructor"
+        },
+        {
+          "patternId": "cppcheck_noExplicitConstructor"
+        },
+        {
+          "patternId": "cppcheck_nullPointer"
+        },
+        {
+          "patternId": "cppcheck_nullPointerDefaultArg"
+        },
+        {
+          "patternId": "cppcheck_nullPointerRedundantCheck"
+        },
+        {
+          "patternId": "cppcheck_operatorEqMissingReturnStatement"
+        },
+        {
+          "patternId": "cppcheck_operatorEqRetRefThis"
+        },
+        {
+          "patternId": "cppcheck_operatorEqShouldBeLeftUnimplemented"
+        },
+        {
+          "patternId": "cppcheck_operatorEqToSelf"
+        },
+        {
+          "patternId": "cppcheck_operatorEqVarError"
+        },
+        {
+          "patternId": "cppcheck_oppositeInnerCondition"
+        },
+        {
+          "patternId": "cppcheck_passedByValue"
+        },
+        {
+          "patternId": "cppcheck_pointerArithBool"
+        },
+        {
+          "patternId": "cppcheck_pointerLessThanZero"
+        },
+        {
+          "patternId": "cppcheck_pointerOutOfBounds"
+        },
+        {
+          "patternId": "cppcheck_pointerPositive"
+        },
+        {
+          "patternId": "cppcheck_pointerSize"
+        },
+        {
+          "patternId": "cppcheck_postfixOperator"
+        },
+        {
+          "patternId": "cppcheck_preprocessorErrorDirective"
+        },
+        {
+          "patternId": "cppcheck_publicAllocationError"
+        },
+        {
+          "patternId": "cppcheck_raceAfterInterlockedDecrement"
+        },
+        {
+          "patternId": "cppcheck_readWriteOnlyFile"
+        },
+        {
+          "patternId": "cppcheck_redundantAssignInSwitch"
+        },
+        {
+          "patternId": "cppcheck_redundantAssignment"
+        },
+        {
+          "patternId": "cppcheck_redundantCondition"
+        },
+        {
+          "patternId": "cppcheck_redundantCopy"
+        },
+        {
+          "patternId": "cppcheck_redundantIfRemove"
+        },
+        {
+          "patternId": "cppcheck_redundantPointerOp"
+        },
+        {
+          "patternId": "cppcheck_resourceLeak"
+        },
+        {
+          "patternId": "cppcheck_returnReference"
+        },
+        {
+          "patternId": "cppcheck_returnTempReference"
+        },
+        {
+          "patternId": "cppcheck_seekOnAppendedFile"
+        },
+        {
+          "patternId": "cppcheck_selfAssignment"
+        },
+        {
+          "patternId": "cppcheck_selfInitialization"
+        },
+        {
+          "patternId": "cppcheck_shiftNegative"
+        },
+        {
+          "patternId": "cppcheck_shiftTooManyBits"
+        },
+        {
+          "patternId": "cppcheck_signConversion"
+        },
+        {
+          "patternId": "cppcheck_sizeofCalculation"
+        },
+        {
+          "patternId": "cppcheck_sizeofDereferencedVoidPointer"
+        },
+        {
+          "patternId": "cppcheck_sizeofDivisionMemfunc"
+        },
+        {
+          "patternId": "cppcheck_sizeofsizeof"
+        },
+        {
+          "patternId": "cppcheck_sizeofVoid"
+        },
+        {
+          "patternId": "cppcheck_sizeofwithnumericparameter"
+        },
+        {
+          "patternId": "cppcheck_sizeofwithsilentarraypointer"
+        },
+        {
+          "patternId": "cppcheck_sprintfOverlappingData"
+        },
+        {
+          "patternId": "cppcheck_staticStringCompare"
+        },
+        {
+          "patternId": "cppcheck_stlBoundaries"
+        },
+        {
+          "patternId": "cppcheck_stlcstr"
+        },
+        {
+          "patternId": "cppcheck_stlcstrParam"
+        },
+        {
+          "patternId": "cppcheck_stlcstrReturn"
+        },
+        {
+          "patternId": "cppcheck_stlIfFind"
+        },
+        {
+          "patternId": "cppcheck_stlIfStrFind"
+        },
+        {
+          "patternId": "cppcheck_StlMissingComparison"
+        },
+        {
+          "patternId": "cppcheck_stlOutOfBounds"
+        },
+        {
+          "patternId": "cppcheck_stlSize"
+        },
+        {
+          "patternId": "cppcheck_stringCompare"
+        },
+        {
+          "patternId": "cppcheck_stringLiteralWrite"
+        },
+        {
+          "patternId": "cppcheck_strPlusChar"
+        },
+        {
+          "patternId": "cppcheck_thisSubtraction"
+        },
+        {
+          "patternId": "cppcheck_throwInNoexceptFunction"
+        },
+        {
+          "patternId": "cppcheck_toomanyconfigs"
+        },
+        {
+          "patternId": "cppcheck_truncLongCastAssignment"
+        },
+        {
+          "patternId": "cppcheck_truncLongCastReturn"
+        },
+        {
+          "patternId": "cppcheck_unassignedVariable"
+        },
+        {
+          "patternId": "cppcheck_uninitdata"
+        },
+        {
+          "patternId": "cppcheck_uninitMemberVar"
+        },
+        {
+          "patternId": "cppcheck_uninitStructMember"
+        },
+        {
+          "patternId": "cppcheck_unpreciseMathCall"
+        },
+        {
+          "patternId": "cppcheck_unreachableCode"
+        },
+        {
+          "patternId": "cppcheck_unreadVariable"
+        },
+        {
+          "patternId": "cppcheck_unsafeClassCanLeak"
+        },
+        {
+          "patternId": "cppcheck_unsignedLessThanZero"
+        },
+        {
+          "patternId": "cppcheck_unsignedPositive"
+        },
+        {
+          "patternId": "cppcheck_unusedAllocatedMemory"
+        },
+        {
+          "patternId": "cppcheck_unusedLabel"
+        },
+        {
+          "patternId": "cppcheck_unusedScopedObject"
+        },
+        {
+          "patternId": "cppcheck_unusedStructMember"
+        },
+        {
+          "patternId": "cppcheck_useClosedFile"
+        },
+        {
+          "patternId": "cppcheck_useInitializationList"
+        },
+        {
+          "patternId": "cppcheck_uselessAssignmentArg"
+        },
+        {
+          "patternId": "cppcheck_uselessAssignmentPtrArg"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsCompare"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsEmpty"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsRemove"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsSubstr"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsSwap"
+        },
+        {
+          "patternId": "cppcheck_va_end_missing"
+        },
+        {
+          "patternId": "cppcheck_va_list_usedBeforeStarted"
+        },
+        {
+          "patternId": "cppcheck_varFuncNullUB"
+        },
+        {
+          "patternId": "cppcheck_variableScope"
+        },
+        {
+          "patternId": "cppcheck_va_start_referencePassed"
+        },
+        {
+          "patternId": "cppcheck_va_start_subsequentCalls"
+        },
+        {
+          "patternId": "cppcheck_va_start_wrongParameter"
+        },
+        {
+          "patternId": "cppcheck_virtualDestructor"
+        },
+        {
+          "patternId": "cppcheck_writeReadOnlyFile"
+        },
+        {
+          "patternId": "cppcheck_wrongmathcall"
+        },
+        {
+          "patternId": "cppcheck_wrongPrintfScanfArgNum"
+        },
+        {
+          "patternId": "cppcheck_wrongPrintfScanfParameterPositionError"
+        },
+        {
+          "patternId": "cppcheck_zerodiv"
+        },
+        {
+          "patternId": "cppcheck_zerodivcond"
+        }
+      ]
+    },
+    {
+      "toolId": "Semgrep",
+      "patterns": [
+        {
+          "patternId": "Semgrep_bash.curl.security.curl-eval.curl-eval"
+        },
+        {
+          "patternId": "Semgrep_c.lang.security.insecure-use-gets-fn.insecure-use-gets-fn"
+        },
+        {
+          "patternId": "Semgrep_c.lang.security.random-fd-exhaustion.random-fd-exhaustion"
+        },
+        {
+          "patternId": "Semgrep_dockerfile.security.dockerd-socket-mount.dockerfile-dockerd-socket-mount"
+        },
+        {
+          "patternId": "Semgrep_generic.secrets.security.detected-onfido-live-api-token.detected-onfido-live-api-token"
+        },
+        {
+          "patternId": "Semgrep_generic.secrets.security.detected-stripe-restricted-api-key.detected-stripe-restricted-api-key"
+        },
+        {
+          "patternId": "Semgrep_generic.secrets.security.detected-username-and-password-in-uri.detected-username-and-password-in-uri"
+        },
+        {
+          "patternId": "Semgrep_generic.secrets.security.google-maps-apikeyleak.google-maps-apikeyleak"
+        },
+        {
+          "patternId": "Semgrep_javascript.argon2.security.unsafe-argon2-config.unsafe-argon2-config"
+        },
+        {
+          "patternId": "Semgrep_javascript.browser.security.open-redirect.js-open-redirect"
+        },
+        {
+          "patternId": "Semgrep_javascript.browser.security.raw-html-concat.raw-html-concat"
+        },
+        {
+          "patternId": "Semgrep_javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration"
+        },
+        {
+          "patternId": "Semgrep_javascript.chrome-remote-interface.security.audit.chrome-remote-interface-compilescript-injection.chrome-remote-interface-compilescript-injection"
+        },
+        {
+          "patternId": "Semgrep_javascript.deno.security.audit.deno-dangerous-run.deno-dangerous-run"
+        },
+        {
+          "patternId": "Semgrep_javascript.intercom.security.audit.intercom-settings-user-identifier-without-user-hash.intercom-settings-user-identifier-without-user-hash"
+        },
+        {
+          "patternId": "Semgrep_javascript.jose.security.jwt-hardcode.hardcoded-jwt-secret"
+        },
+        {
+          "patternId": "Semgrep_javascript.jose.security.jwt-none-alg.jwt-none-alg"
+        },
+        {
+          "patternId": "Semgrep_javascript.jsonwebtoken.security.jwt-hardcode.hardcoded-jwt-secret"
+        },
+        {
+          "patternId": "Semgrep_javascript.jsonwebtoken.security.jwt-none-alg.jwt-none-alg"
+        },
+        {
+          "patternId": "Semgrep_javascript.jwt-simple.security.jwt-simple-noverify.jwt-simple-noverify"
+        },
+        {
+          "patternId": "Semgrep_javascript.lang.security.audit.code-string-concat.code-string-concat"
+        },
+        {
+          "patternId": "Semgrep_javascript.lang.security.audit.sqli.node-knex-sqli.node-knex-sqli"
+        },
+        {
+          "patternId": "Semgrep_javascript.lang.security.detect-eval-with-expression.detect-eval-with-expression"
+        },
+        {
+          "patternId": "Semgrep_javascript.node-crypto.security.aead-no-final.aead-no-final"
+        },
+        {
+          "patternId": "Semgrep_javascript.node-crypto.security.create-de-cipher-no-iv.create-de-cipher-no-iv"
+        },
+        {
+          "patternId": "Semgrep_javascript.node-crypto.security.gcm-no-tag-length.gcm-no-tag-length"
+        },
+        {
+          "patternId": "Semgrep_javascript.passport-jwt.security.passport-hardcode.hardcoded-passport-secret"
+        },
+        {
+          "patternId": "Semgrep_json.aws.security.public-s3-bucket.public-s3-bucket"
+        },
+        {
+          "patternId": "Semgrep_json.aws.security.public-s3-policy-statement.public-s3-policy-statement"
+        },
+        {
+          "patternId": "Semgrep_json.aws.security.wildcard-assume-role.wildcard-assume-role"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.bypass-tls-verification.bypass-tls-verification"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.disallow-old-tls-versions1.disallow-old-tls-versions1"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.disallow-old-tls-versions2.disallow-old-tls-versions2"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.ftp-request.ftp-request"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.http-request.http-request"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.rest-http-client-support.rest-http-client-support"
+        },
+        {
+          "patternId": "Semgrep_problem-based-packs.insecure-transport.js-node.telnet-request.telnet-request"
+        },
+        {
+          "patternId": "Semgrep_yaml.argo.security.argo-workflow-parameter-command-injection.argo-workflow-parameter-command-injection"
+        },
+        {
+          "patternId": "Semgrep_yaml.docker-compose.security.privileged-service.privileged-service"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.allowed-unsecure-commands.allowed-unsecure-commands"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.audit.unsafe-add-mask-workflow-command.unsafe-add-mask-workflow-command"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.curl-eval.curl-eval"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.github-script-injection.github-script-injection"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.pull-request-target-code-checkout.pull-request-target-code-checkout"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.run-shell-injection.run-shell-injection"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.security.workflow-run-target-code-checkout.workflow-run-target-code-checkout"
+        },
+        {
+          "patternId": "Semgrep_yaml.github-actions.semgrep-configuration.semgrep-github-action-push-without-branches.semgrep-github-action-push-without-branches"
+        },
+        {
+          "patternId": "Semgrep_yaml.openapi.security.openai-consequential-action-false.openai-consequential-action-false"
+        },
+        {
+          "patternId": "Semgrep_yaml.openapi.security.use-of-basic-authentication.use-of-basic-authentication"
+        },
+        {
+          "patternId": "Semgrep_yaml_spring_rule-SpringActuatorFullyEnabled"
+        }
+      ]
+    },
+    {
+      "toolId": "Stylelint",
+      "patterns": [
+        {
+          "patternId": "Stylelint_alpha-value-notation"
+        },
+        {
+          "patternId": "Stylelint_at-rule-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_at-rule-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_at-rule-empty-line-before"
+        },
+        {
+          "patternId": "Stylelint_at-rule-no-vendor-prefix"
+        },
+        {
+          "patternId": "Stylelint_at-rule-property-required-list"
+        },
+        {
+          "patternId": "Stylelint_color-function-notation"
+        },
+        {
+          "patternId": "Stylelint_color-hex-alpha"
+        },
+        {
+          "patternId": "Stylelint_color-hex-length"
+        },
+        {
+          "patternId": "Stylelint_color-named"
+        },
+        {
+          "patternId": "Stylelint_color-no-hex"
+        },
+        {
+          "patternId": "Stylelint_comment-empty-line-before"
+        },
+        {
+          "patternId": "Stylelint_comment-pattern"
+        },
+        {
+          "patternId": "Stylelint_comment-whitespace-inside"
+        },
+        {
+          "patternId": "Stylelint_comment-word-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_custom-media-pattern"
+        },
+        {
+          "patternId": "Stylelint_custom-property-empty-line-before"
+        },
+        {
+          "patternId": "Stylelint_custom-property-pattern"
+        },
+        {
+          "patternId": "Stylelint_declaration-block-no-redundant-longhand-properties"
+        },
+        {
+          "patternId": "Stylelint_declaration-block-single-line-max-declarations"
+        },
+        {
+          "patternId": "Stylelint_declaration-empty-line-before"
+        },
+        {
+          "patternId": "Stylelint_declaration-no-important"
+        },
+        {
+          "patternId": "Stylelint_declaration-property-max-values"
+        },
+        {
+          "patternId": "Stylelint_declaration-property-unit-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_declaration-property-unit-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_declaration-property-value-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_declaration-property-value-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_font-family-name-quotes"
+        },
+        {
+          "patternId": "Stylelint_font-weight-notation"
+        },
+        {
+          "patternId": "Stylelint_function-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_function-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_function-name-case"
+        },
+        {
+          "patternId": "Stylelint_function-url-no-scheme-relative"
+        },
+        {
+          "patternId": "Stylelint_function-url-quotes"
+        },
+        {
+          "patternId": "Stylelint_function-url-scheme-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_function-url-scheme-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_hue-degree-notation"
+        },
+        {
+          "patternId": "Stylelint_import-notation"
+        },
+        {
+          "patternId": "Stylelint_keyframe-selector-notation"
+        },
+        {
+          "patternId": "Stylelint_keyframes-name-pattern"
+        },
+        {
+          "patternId": "Stylelint_length-zero-no-unit"
+        },
+        {
+          "patternId": "Stylelint_max-nesting-depth"
+        },
+        {
+          "patternId": "Stylelint_media-feature-name-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_media-feature-name-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_media-feature-name-no-vendor-prefix"
+        },
+        {
+          "patternId": "Stylelint_media-feature-name-unit-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_media-feature-name-value-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_media-feature-range-notation"
+        },
+        {
+          "patternId": "Stylelint_number-max-precision"
+        },
+        {
+          "patternId": "Stylelint_property-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_property-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_property-no-vendor-prefix"
+        },
+        {
+          "patternId": "Stylelint_rule-empty-line-before"
+        },
+        {
+          "patternId": "Stylelint_rule-selector-property-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-attribute-name-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-attribute-operator-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-attribute-operator-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-attribute-quotes"
+        },
+        {
+          "patternId": "Stylelint_selector-class-pattern"
+        },
+        {
+          "patternId": "Stylelint_selector-combinator-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-combinator-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-id-pattern"
+        },
+        {
+          "patternId": "Stylelint_selector-max-attribute"
+        },
+        {
+          "patternId": "Stylelint_selector-max-class"
+        },
+        {
+          "patternId": "Stylelint_selector-max-combinators"
+        },
+        {
+          "patternId": "Stylelint_selector-max-compound-selectors"
+        },
+        {
+          "patternId": "Stylelint_selector-max-id"
+        },
+        {
+          "patternId": "Stylelint_selector-max-pseudo-class"
+        },
+        {
+          "patternId": "Stylelint_selector-max-specificity"
+        },
+        {
+          "patternId": "Stylelint_selector-max-type"
+        },
+        {
+          "patternId": "Stylelint_selector-max-universal"
+        },
+        {
+          "patternId": "Stylelint_selector-nested-pattern"
+        },
+        {
+          "patternId": "Stylelint_selector-no-qualifying-type"
+        },
+        {
+          "patternId": "Stylelint_selector-not-notation"
+        },
+        {
+          "patternId": "Stylelint_selector-no-vendor-prefix"
+        },
+        {
+          "patternId": "Stylelint_selector-pseudo-class-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-pseudo-class-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-pseudo-element-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-pseudo-element-colon-notation"
+        },
+        {
+          "patternId": "Stylelint_selector-pseudo-element-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_selector-type-case"
+        },
+        {
+          "patternId": "Stylelint_shorthand-property-no-redundant-values"
+        },
+        {
+          "patternId": "Stylelint_time-min-milliseconds"
+        },
+        {
+          "patternId": "Stylelint_unit-allowed-list"
+        },
+        {
+          "patternId": "Stylelint_unit-disallowed-list"
+        },
+        {
+          "patternId": "Stylelint_value-keyword-case"
+        },
+        {
+          "patternId": "Stylelint_value-no-vendor-prefix"
+        }
+      ]
+    },
+    {
+      "toolId": "spectral",
+      "patterns": [
+        {
+          "patternId": "spectral_array-items"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-channel-no-empty-parameter"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-channel-no-query-nor-fragment"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-channel-no-trailing-slash"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-channel-servers"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-document-resolved"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-document-unresolved"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-headers-schema-type-object"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-operation-description"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-operation-security"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-payload-unsupported-schemaFormat"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-server-no-empty-variable"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-server-no-trailing-slash"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-tags"
+        },
+        {
+          "patternId": "spectral_asyncapi-3-tags-uniqueness"
+        },
+        {
+          "patternId": "spectral_asyncapi-channel-no-empty-parameter"
+        },
+        {
+          "patternId": "spectral_asyncapi-channel-no-query-nor-fragment"
+        },
+        {
+          "patternId": "spectral_asyncapi-channel-no-trailing-slash"
+        },
+        {
+          "patternId": "spectral_asyncapi-channel-parameters"
+        },
+        {
+          "patternId": "spectral_asyncapi-channel-servers"
+        },
+        {
+          "patternId": "spectral_asyncapi-headers-schema-type-object"
+        },
+        {
+          "patternId": "spectral_asyncapi-info-contact"
+        },
+        {
+          "patternId": "spectral_asyncapi-info-contact-properties"
+        },
+        {
+          "patternId": "spectral_asyncapi-info-description"
+        },
+        {
+          "patternId": "spectral_asyncapi-info-license"
+        },
+        {
+          "patternId": "spectral_asyncapi-latest-version"
+        },
+        {
+          "patternId": "spectral_asyncapi-message-examples"
+        },
+        {
+          "patternId": "spectral_asyncapi-message-messageId-uniqueness"
+        },
+        {
+          "patternId": "spectral_asyncapi-operation-description"
+        },
+        {
+          "patternId": "spectral_asyncapi-operation-operationId"
+        },
+        {
+          "patternId": "spectral_asyncapi-operation-operationId-uniqueness"
+        },
+        {
+          "patternId": "spectral_asyncapi-operation-security"
+        },
+        {
+          "patternId": "spectral_asyncapi-payload"
+        },
+        {
+          "patternId": "spectral_asyncapi-payload-default"
+        },
+        {
+          "patternId": "spectral_asyncapi-payload-examples"
+        },
+        {
+          "patternId": "spectral_asyncapi-payload-unsupported-schemaFormat"
+        },
+        {
+          "patternId": "spectral_asyncapi-schema"
+        },
+        {
+          "patternId": "spectral_asyncapi-schema-default"
+        },
+        {
+          "patternId": "spectral_asyncapi-schema-examples"
+        },
+        {
+          "patternId": "spectral_asyncapi-server-no-empty-variable"
+        },
+        {
+          "patternId": "spectral_asyncapi-server-no-trailing-slash"
+        },
+        {
+          "patternId": "spectral_asyncapi-servers"
+        },
+        {
+          "patternId": "spectral_asyncapi-server-security"
+        },
+        {
+          "patternId": "spectral_asyncapi-server-variables"
+        },
+        {
+          "patternId": "spectral_asyncapi-tags"
+        },
+        {
+          "patternId": "spectral_asyncapi-tags-uniqueness"
+        },
+        {
+          "patternId": "spectral_asyncapi-unused-components-schema"
+        },
+        {
+          "patternId": "spectral_asyncapi-unused-components-server"
+        },
+        {
+          "patternId": "spectral_duplicated-entry-in-enum"
+        },
+        {
+          "patternId": "spectral_info-contact"
+        },
+        {
+          "patternId": "spectral_info-description"
+        },
+        {
+          "patternId": "spectral_no-eval-in-markdown"
+        },
+        {
+          "patternId": "spectral_no-$ref-siblings"
+        },
+        {
+          "patternId": "spectral_no-script-tags-in-markdown"
+        },
+        {
+          "patternId": "spectral_oas2-anyOf"
+        },
+        {
+          "patternId": "spectral_oas2-api-host"
+        },
+        {
+          "patternId": "spectral_oas2-api-schemes"
+        },
+        {
+          "patternId": "spectral_oas2-discriminator"
+        },
+        {
+          "patternId": "spectral_oas2-host-trailing-slash"
+        },
+        {
+          "patternId": "spectral_oas2-oneOf"
+        },
+        {
+          "patternId": "spectral_oas2-operation-formData-consume-check"
+        },
+        {
+          "patternId": "spectral_oas2-operation-security-defined"
+        },
+        {
+          "patternId": "spectral_oas2-schema"
+        },
+        {
+          "patternId": "spectral_oas2-unused-definition"
+        },
+        {
+          "patternId": "spectral_oas2-valid-media-example"
+        },
+        {
+          "patternId": "spectral_oas2-valid-schema-example"
+        },
+        {
+          "patternId": "spectral_oas3_1-callbacks-in-webhook"
+        },
+        {
+          "patternId": "spectral_oas3_1-servers-in-webhook"
+        },
+        {
+          "patternId": "spectral_oas3-api-servers"
+        },
+        {
+          "patternId": "spectral_oas3-callbacks-in-callbacks"
+        },
+        {
+          "patternId": "spectral_oas3-examples-value-or-externalValue"
+        },
+        {
+          "patternId": "spectral_oas3-operation-security-defined"
+        },
+        {
+          "patternId": "spectral_oas3-schema"
+        },
+        {
+          "patternId": "spectral_oas3-server-trailing-slash"
+        },
+        {
+          "patternId": "spectral_oas3-server-variables"
+        },
+        {
+          "patternId": "spectral_oas3-unused-component"
+        },
+        {
+          "patternId": "spectral_oas3-valid-media-example"
+        },
+        {
+          "patternId": "spectral_oas3-valid-schema-example"
+        },
+        {
+          "patternId": "spectral_openapi-tags-uniqueness"
+        },
+        {
+          "patternId": "spectral_operation-description"
+        },
+        {
+          "patternId": "spectral_operation-operationId"
+        },
+        {
+          "patternId": "spectral_operation-operationId-unique"
+        },
+        {
+          "patternId": "spectral_operation-operationId-valid-in-url"
+        },
+        {
+          "patternId": "spectral_operation-parameters"
+        },
+        {
+          "patternId": "spectral_operation-success-response"
+        },
+        {
+          "patternId": "spectral_operation-tag-defined"
+        },
+        {
+          "patternId": "spectral_operation-tags"
+        },
+        {
+          "patternId": "spectral_path-declarations-must-exist"
+        },
+        {
+          "patternId": "spectral_path-keys-no-trailing-slash"
+        },
+        {
+          "patternId": "spectral_path-not-include-query"
+        },
+        {
+          "patternId": "spectral_path-params"
+        },
+        {
+          "patternId": "spectral_typed-enum"
+        }
+      ]
+    },
+    {
+      "toolId": "ESLint9",
+      "patterns": [
+        {
+          "patternId": "ESLint9_constructor-super"
+        },
+        {
+          "patternId": "ESLint9_for-direction"
+        },
+        {
+          "patternId": "ESLint9_getter-return"
+        },
+        {
+          "patternId": "ESLint9_no-async-promise-executor"
+        },
+        {
+          "patternId": "ESLint9_no-case-declarations"
+        },
+        {
+          "patternId": "ESLint9_no-class-assign"
+        },
+        {
+          "patternId": "ESLint9_no-compare-neg-zero"
+        },
+        {
+          "patternId": "ESLint9_no-cond-assign"
+        },
+        {
+          "patternId": "ESLint9_no-constant-binary-expression"
+        },
+        {
+          "patternId": "ESLint9_no-constant-condition"
+        },
+        {
+          "patternId": "ESLint9_no-const-assign"
+        },
+        {
+          "patternId": "ESLint9_no-control-regex"
+        },
+        {
+          "patternId": "ESLint9_no-debugger"
+        },
+        {
+          "patternId": "ESLint9_no-delete-var"
+        },
+        {
+          "patternId": "ESLint9_no-dupe-args"
+        },
+        {
+          "patternId": "ESLint9_no-dupe-class-members"
+        },
+        {
+          "patternId": "ESLint9_no-dupe-else-if"
+        },
+        {
+          "patternId": "ESLint9_no-dupe-keys"
+        },
+        {
+          "patternId": "ESLint9_no-duplicate-case"
+        },
+        {
+          "patternId": "ESLint9_no-empty"
+        },
+        {
+          "patternId": "ESLint9_no-empty-character-class"
+        },
+        {
+          "patternId": "ESLint9_no-empty-pattern"
+        },
+        {
+          "patternId": "ESLint9_no-empty-static-block"
+        },
+        {
+          "patternId": "ESLint9_no-ex-assign"
+        },
+        {
+          "patternId": "ESLint9_no-extra-boolean-cast"
+        },
+        {
+          "patternId": "ESLint9_no-fallthrough"
+        },
+        {
+          "patternId": "ESLint9_no-func-assign"
+        },
+        {
+          "patternId": "ESLint9_no-global-assign"
+        },
+        {
+          "patternId": "ESLint9_no-import-assign"
+        },
+        {
+          "patternId": "ESLint9_no-invalid-regexp"
+        },
+        {
+          "patternId": "ESLint9_no-irregular-whitespace"
+        },
+        {
+          "patternId": "ESLint9_no-loss-of-precision"
+        },
+        {
+          "patternId": "ESLint9_no-misleading-character-class"
+        },
+        {
+          "patternId": "ESLint9_no-new-native-nonconstructor"
+        },
+        {
+          "patternId": "ESLint9_no-nonoctal-decimal-escape"
+        },
+        {
+          "patternId": "ESLint9_no-obj-calls"
+        },
+        {
+          "patternId": "ESLint9_no-octal"
+        },
+        {
+          "patternId": "ESLint9_no-prototype-builtins"
+        },
+        {
+          "patternId": "ESLint9_no-redeclare"
+        },
+        {
+          "patternId": "ESLint9_no-regex-spaces"
+        },
+        {
+          "patternId": "ESLint9_no-self-assign"
+        },
+        {
+          "patternId": "ESLint9_no-setter-return"
+        },
+        {
+          "patternId": "ESLint9_no-shadow-restricted-names"
+        },
+        {
+          "patternId": "ESLint9_no-sparse-arrays"
+        },
+        {
+          "patternId": "ESLint9_no-this-before-super"
+        },
+        {
+          "patternId": "ESLint9_no-undef"
+        },
+        {
+          "patternId": "ESLint9_no-unexpected-multiline"
+        },
+        {
+          "patternId": "ESLint9_no-unreachable"
+        },
+        {
+          "patternId": "ESLint9_no-unsafe-finally"
+        },
+        {
+          "patternId": "ESLint9_no-unsafe-negation"
+        },
+        {
+          "patternId": "ESLint9_no-unsafe-optional-chaining"
+        },
+        {
+          "patternId": "ESLint9_no-unused-labels"
+        },
+        {
+          "patternId": "ESLint9_no-unused-private-class-members"
+        },
+        {
+          "patternId": "ESLint9_no-unused-vars"
+        },
+        {
+          "patternId": "ESLint9_no-useless-backreference"
+        },
+        {
+          "patternId": "ESLint9_no-useless-catch"
+        },
+        {
+          "patternId": "ESLint9_no-useless-escape"
+        },
+        {
+          "patternId": "ESLint9_no-with"
+        },
+        {
+          "patternId": "ESLint9_require-yield"
+        },
+        {
+          "patternId": "ESLint9_security_detect-bidi-characters"
+        },
+        {
+          "patternId": "ESLint9_security_detect-buffer-noassert"
+        },
+        {
+          "patternId": "ESLint9_security_detect-child-process"
+        },
+        {
+          "patternId": "ESLint9_security_detect-disable-mustache-escape"
+        },
+        {
+          "patternId": "ESLint9_security_detect-eval-with-expression"
+        },
+        {
+          "patternId": "ESLint9_security_detect-new-buffer"
+        },
+        {
+          "patternId": "ESLint9_security_detect-no-csrf-before-method-override"
+        },
+        {
+          "patternId": "ESLint9_security_detect-non-literal-fs-filename"
+        },
+        {
+          "patternId": "ESLint9_security_detect-non-literal-regexp"
+        },
+        {
+          "patternId": "ESLint9_security_detect-non-literal-require"
+        },
+        {
+          "patternId": "ESLint9_security_detect-object-injection"
+        },
+        {
+          "patternId": "ESLint9_security_detect-possible-timing-attacks"
+        },
+        {
+          "patternId": "ESLint9_security_detect-pseudoRandomBytes"
+        },
+        {
+          "patternId": "ESLint9_security_detect-unsafe-regex"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-absence-of-name-option-in-exrpress-session"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-child-process"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-dangerous-redirects"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-eval-with-expr"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-html-injection"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-improper-exception-handling"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-non-literal-require-calls"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-nosql-injection"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-option-multiplestatements-in-mysql"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-option-rejectunauthorized-in-nodejs-httpsrequest"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-option-unsafe-in-serialize-javascript-npm-package"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-possible-timing-attacks"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-security-missconfiguration-cookie"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-unhandled-async-errors"
+        },
+        {
+          "patternId": "ESLint9_security-node_detect-unhandled-event-errors"
+        },
+        {
+          "patternId": "ESLint9_security-node_disable-ssl-across-node-server"
+        },
+        {
+          "patternId": "ESLint9_security-node_non-literal-reg-expr"
+        },
+        {
+          "patternId": "ESLint9_use-isnan"
+        },
+        {
+          "patternId": "ESLint9_valid-typeof"
+        },
+        {
+          "patternId": "ESLint9_xss_no-location-href-assign"
+        }
+      ]
+    },
+    {
+      "toolId": "flawfinder",
+      "patterns": [
+        {
+          "patternId": "flawfinder_fgetc"
+        },
+        {
+          "patternId": "flawfinder_getc"
+        },
+        {
+          "patternId": "flawfinder_getchar"
+        },
+        {
+          "patternId": "flawfinder__gettc"
+        },
+        {
+          "patternId": "flawfinder_lstrcatn"
+        },
+        {
+          "patternId": "flawfinder_lstrcpyn"
+        },
+        {
+          "patternId": "flawfinder__mbslen"
+        },
+        {
+          "patternId": "flawfinder__mbsnbcat"
+        },
+        {
+          "patternId": "flawfinder__mbsnbcpy"
+        },
+        {
+          "patternId": "flawfinder_memalign"
+        },
+        {
+          "patternId": "flawfinder_read"
+        },
+        {
+          "patternId": "flawfinder_strcadd"
+        },
+        {
+          "patternId": "flawfinder_strccpy"
+        },
+        {
+          "patternId": "flawfinder_strlen"
+        },
+        {
+          "patternId": "flawfinder_strncat"
+        },
+        {
+          "patternId": "flawfinder_strncpy"
+        },
+        {
+          "patternId": "flawfinder__tcslen"
+        },
+        {
+          "patternId": "flawfinder__tcsncat"
+        },
+        {
+          "patternId": "flawfinder__tcsncpy"
+        },
+        {
+          "patternId": "flawfinder_ulimit"
+        },
+        {
+          "patternId": "flawfinder_umask"
+        },
+        {
+          "patternId": "flawfinder_usleep"
+        },
+        {
+          "patternId": "flawfinder_wcslen"
+        },
+        {
+          "patternId": "flawfinder_wcsncat"
+        },
+        {
+          "patternId": "flawfinder_wcsncpy"
+        }
+      ]
+    },
+    {
+      "toolId": "Checkov",
+      "patterns": [
+        {
+          "patternId": "Checkov_CKV2_GHA_1"
+        },
+        {
+          "patternId": "Checkov_CKV_BITBUCKET_1"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_1"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_2"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_3"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_4"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_5"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_6"
+        },
+        {
+          "patternId": "Checkov_CKV_GHA_7"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_1"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_10"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_11"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_12"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_13"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_14"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_15"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_16"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_17"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_18"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_19"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_2"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_20"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_21"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_22"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_23"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_26"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_27"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_28"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_3"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_4"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_5"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_6"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_7"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_8"
+        },
+        {
+          "patternId": "Checkov_CKV_GITHUB_9"
+        },
+        {
+          "patternId": "Checkov_CKV_GITLAB_1"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_1"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_10"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_11"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_12"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_13"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_14"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_15"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_16"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_17"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_18"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_19"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_2"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_20"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_21"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_3"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_4"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_5"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_6"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_7"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_8"
+        },
+        {
+          "patternId": "Checkov_CKV_OPENAPI_9"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_1"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_11"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_12"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_13"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_14"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_15"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_16"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_17"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_18"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_19"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_2"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_3"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_4"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_5"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_6"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_7"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_8"
+        },
+        {
+          "patternId": "Checkov_CKV_SECRET_9"
+        }
+      ]
+    },
+    {
+      "toolId": "Lizard",
+      "patterns": [
+        {
+          "patternId": "Lizard_file-nloc-medium",
+          "parameters": {
+            "threshold": "1040"
+          }
+        },
+        {
+          "patternId": "Lizard_nloc-medium",
+          "parameters": {
+            "threshold": "220"
+          }
+        },
+        {
+          "patternId": "Lizard_parameter-count-medium"
+        },
+        {
+          "patternId": "Lizard_nloc-critical",
+          "parameters": {
+            "threshold": "530"
+          }
+        },
+        {
+          "patternId": "Lizard_ccn-critical",
+          "parameters": {
+            "threshold": "90"
+          }
+        },
+        {
+          "patternId": "Lizard_ccn-medium",
+          "parameters": {
+            "threshold": "30"
+          }
+        },
+        {
+          "patternId": "Lizard_parameter-count-critical"
+        },
+        {
+          "patternId": "Lizard_file-nloc-critical",
+          "parameters": {
+            "threshold": "1580"
+          }
+        }
+      ]
+    },
+    {
+      "toolId": "PMD7",
+      "patterns": [
+        {
+          "patternId": "PMD7_category_ecmascript_bestpractices_AvoidWithStatement"
+        },
+        {
+          "patternId": "PMD7_category_ecmascript_bestpractices_ConsistentReturn"
+        },
+        {
+          "patternId": "PMD7_category_ecmascript_bestpractices_UseBaseWithParseInt"
+        },
+        {
+          "patternId": "PMD7_category_ecmascript_codestyle_AssignmentInOperand"
+        },
+        {
+          "patternId": "PMD7_category_ecmascript_codestyle_UnnecessaryBlock"
+        },
+        {
+          "patternId": "PMD7_category_ecmascript_errorprone_EqualComparison"
+        },
+        {
+          "patternId": "PMD7_category_jsp_bestpractices_NoClassAttribute"
+        },
+        {
+          "patternId": "PMD7_category_jsp_design_NoInlineScript"
+        },
+        {
+          "patternId": "PMD7_category_pom_errorprone_InvalidDependencyTypes"
+        },
+        {
+          "patternId": "PMD7_category_pom_errorprone_ProjectVersionAsDependencyVersion"
+        },
+        {
+          "patternId": "PMD7_category_xml_errorprone_MistypedCDATASection"
+        },
+        {
+          "patternId": "PMD7_category_xsl_codestyle_UseConcatOnce"
+        },
+        {
+          "patternId": "PMD7_category_xsl_performance_AvoidAxisNavigation"
+        }
+      ]
+    }
+  ],
+  "exclude": []
+}
