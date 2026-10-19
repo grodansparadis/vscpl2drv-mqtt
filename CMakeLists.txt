@@ -39,6 +39,9 @@ find_package(EXPAT REQUIRED)
 find_package(Mosquitto REQUIRED)
 find_package(Threads REQUIRED)
 
+# Mosquitto 2.1+ public headers include cjson/cJSON.h.
+find_path(CJSON_INCLUDE_DIR NAMES cjson/cJSON.h)
+
 find_library(RT_LIBRARY rt)
 
 add_library(vscpl2drv_mqtt SHARED
@@ -65,6 +68,10 @@ target_include_directories(vscpl2drv_mqtt PRIVATE
     ${CMAKE_SOURCE_DIR}/third-party/vscp/src/common
     ${CMAKE_SOURCE_DIR}/third-party/vscp/src/vscp/common
 )
+
+if (CJSON_INCLUDE_DIR)
+    target_include_directories(vscpl2drv_mqtt PRIVATE ${CJSON_INCLUDE_DIR})
+endif()
 
 target_compile_definitions(vscpl2drv_mqtt PRIVATE
     CBC

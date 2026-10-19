@@ -55,7 +55,7 @@ jobs:
         run: >-
           cmake --preset "${{ matrix.preset }}"
           -DCMAKE_INSTALL_LIBDIR=lib
-          -DCMAKE_PREFIX_PATH="$(brew --prefix expat);$(brew --prefix mosquitto);$(brew --prefix openssl@3)"
+          -DCMAKE_PREFIX_PATH="$(brew --prefix expat);$(brew --prefix mosquitto);$(brew --prefix openssl@3);$(brew --prefix cjson)"
 
       - name: Build
         run: cmake --build --preset "${{ matrix.preset }}" --target vscpl2drv_mqtt vscpl2drv_mqtt_semaphore_test --parallel 2
