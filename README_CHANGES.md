@@ -7,6 +7,8 @@ tagged, rename **Unreleased** to the version and date, and start a new
 
 ## Unreleased
 
+- Add scripts/download-artifacts.sh to download and verify the newest CI build artifacts
+- CI writes a SHA256SUMS-<artifact> checksum file into every uploaded build artifact
 - Added CI artifact creation (556be94)
 - Initial plan (591a508)
 - Fix macOS build: replace sem_timedwait with portable sem_trywait fallback (4c070d7)
