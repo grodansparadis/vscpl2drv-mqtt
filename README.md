@@ -61,7 +61,6 @@ pacman -S --needed mingw-w64-ucrt-x86_64-gcc \
   mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja \
   mingw-w64-ucrt-x86_64-expat mingw-w64-ucrt-x86_64-mosquitto \
   mingw-w64-ucrt-x86_64-openssl
-git submodule update --init --recursive
 cmake --preset windows-release
 cmake --build --preset windows-release --target vscpl2drv_mqtt
 cmake --install build --prefix "$PWD/stage"
@@ -74,10 +73,8 @@ Visual Studio/wxWidgets project is not used by CI.
 
 Checkout with
 
-git submodule update --init --recursive
 cd vscpl2drv-mqtt
 ./configure [-enable-debug]
-to initialize the VSCP submodule if you already checked out the repository.
 make install
 ```
 
@@ -89,15 +86,6 @@ sudo apt install libexpat-dev
 ```
 
 before configure and build.
-
-You can also use
-
-```bash
-git submodule init 
-git submodule update
-```
-
-to init the vscp submodule if you allready checked it out.
 
 ## Install
 Install the Debian install file with

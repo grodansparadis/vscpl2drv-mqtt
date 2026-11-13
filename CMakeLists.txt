@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.21)
 
 project(vscpl2drv-mqtt VERSION 1.1.0 LANGUAGES C CXX)
 
+# Third-party sources (formerly git submodules)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake)
+
 include(GNUInstallDirs)
 
 # Derive the MSYS2 prefix from the selected native compiler instead of
@@ -19,10 +22,10 @@ endif()
 
 # Make the unpacked nlohmann header visible.
 include_directories(
-    ${CMAKE_SOURCE_DIR}/third-party/json/include
-    ${CMAKE_SOURCE_DIR}/third-party/Mustache
-    ${CMAKE_SOURCE_DIR}/third-party/spdlog/include
-    ${CMAKE_SOURCE_DIR}/third-party/fmt/include
+    ${THIRD_PARTY_JSON_DIR}/include
+    ${THIRD_PARTY_MUSTACHE_DIR}
+    ${THIRD_PARTY_SPDLOG_DIR}/include
+    ${THIRD_PARTY_FMT_DIR}/include
 )
 
 set(CMAKE_C_STANDARD 99)
@@ -32,7 +35,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third-party/vscp/cmake/modules")
+list(APPEND CMAKE_MODULE_PATH "${THIRD_PARTY_VSCP_DIR}/cmake/modules")
 
 find_package(OpenSSL REQUIRED)
 find_package(EXPAT REQUIRED)
@@ -44,17 +47,17 @@ find_library(RT_LIBRARY rt)
 add_library(vscpl2drv_mqtt SHARED
     linux/vscpl2drv_mqtt.cpp
     common/mqttobj.cpp
-    third-party/vscp/src/vscp/common/vscpremotetcpif.cpp
-    third-party/vscp/src/vscp/common/vscphelper.cpp
-    third-party/vscp/src/vscp/common/vscpdatetime.cpp
-    third-party/vscp/src/vscp/common/guid.cpp
-    third-party/vscp/src/vscp/common/hlo.cpp
-    third-party/vscp/src/common/sockettcp.c
-    third-party/vscp/src/common/vscp-aes.c
-    third-party/vscp/src/common/crc.c
-    third-party/vscp/src/common/crc8.c
-    third-party/vscp/src/common/vscpbase64.c
-    third-party/vscp/src/common/vscpmd5.c
+    ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/vscpremotetcpif.cpp
+    ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/vscphelper.cpp
+    ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/vscpdatetime.cpp
+    ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/guid.cpp
+    ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/hlo.cpp
+    ${THIRD_PARTY_VSCP_DIR}/src/common/sockettcp.c
+    ${THIRD_PARTY_VSCP_DIR}/src/common/vscp-aes.c
+    ${THIRD_PARTY_VSCP_DIR}/src/common/crc.c
+    ${THIRD_PARTY_VSCP_DIR}/src/common/crc8.c
+    ${THIRD_PARTY_VSCP_DIR}/src/common/vscpbase64.c
+    ${THIRD_PARTY_VSCP_DIR}/src/common/vscpmd5.c
 )
 
 target_include_directories(vscpl2drv_mqtt PRIVATE
@@ -62,8 +65,8 @@ target_include_directories(vscpl2drv_mqtt PRIVATE
     ${CMAKE_SOURCE_DIR}/linux
     ${EXPAT_INCLUDE_DIRS}
     ${MOSQUITTO_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}/third-party/vscp/src/common
-    ${CMAKE_SOURCE_DIR}/third-party/vscp/src/vscp/common
+    ${THIRD_PARTY_VSCP_DIR}/src/common
+    ${THIRD_PARTY_VSCP_DIR}/src/vscp/common
 )
 
 target_compile_definitions(vscpl2drv_mqtt PRIVATE
@@ -82,14 +85,14 @@ if (WIN32)
     target_compile_definitions(vscpl2drv_mqtt PRIVATE WIN32)
     target_include_directories(vscpl2drv_mqtt PRIVATE
         ${CMAKE_SOURCE_DIR}/compat
-        ${CMAKE_SOURCE_DIR}/third-party/vscp/src/vscp/daemon
+        ${THIRD_PARTY_VSCP_DIR}/src/vscp/daemon
     )
     if (MINGW)
         target_compile_options(vscpl2drv_mqtt PRIVATE
             -include "${CMAKE_SOURCE_DIR}/compat/mingw-preinclude.h"
         )
         set_source_files_properties(
-            third-party/vscp/src/vscp/common/vscphelper.cpp
+            ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/vscphelper.cpp
             PROPERTIES COMPILE_OPTIONS
                 "-include;${CMAKE_SOURCE_DIR}/compat/mingw-vscphelper-preinclude.h"
         )
@@ -138,15 +141,15 @@ add_executable(vscpl2drv_mqtt_semaphore_test ci/check-semaphore.cpp)
 target_include_directories(vscpl2drv_mqtt_semaphore_test PRIVATE
     ${CMAKE_SOURCE_DIR}/common
     ${OPENSSL_INCLUDE_DIR}
-    ${CMAKE_SOURCE_DIR}/third-party/vscp/src/vscp/common
-    ${CMAKE_SOURCE_DIR}/third-party/vscp/src/common
+    ${THIRD_PARTY_VSCP_DIR}/src/vscp/common
+    ${THIRD_PARTY_VSCP_DIR}/src/common
 )
 target_link_libraries(vscpl2drv_mqtt_semaphore_test PRIVATE Threads::Threads)
 if (WIN32)
     target_compile_definitions(vscpl2drv_mqtt_semaphore_test PRIVATE WIN32)
     target_include_directories(vscpl2drv_mqtt_semaphore_test PRIVATE
         ${CMAKE_SOURCE_DIR}/compat
-        ${CMAKE_SOURCE_DIR}/third-party/vscp/src/vscp/daemon
+        ${THIRD_PARTY_VSCP_DIR}/src/vscp/daemon
     )
     if (MINGW)
         target_compile_options(vscpl2drv_mqtt_semaphore_test PRIVATE

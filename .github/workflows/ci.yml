@@ -33,8 +33,6 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -110,8 +108,6 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install native Windows toolchain
         uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2
@@ -190,8 +186,6 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Enable ARM emulation
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
