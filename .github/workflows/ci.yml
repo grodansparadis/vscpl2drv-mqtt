@@ -38,7 +38,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libexpat1-dev libmosquitto-dev libssl-dev
+          sudo apt-get install --yes libexpat1-dev libmosquitto-dev libssl-dev pandoc
 
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
@@ -204,7 +204,7 @@ jobs:
               apt-get update
               apt-get install --yes --no-install-recommends \
                 build-essential cmake file \
-                libexpat1-dev libmosquitto-dev libssl-dev
+                libexpat1-dev libmosquitto-dev libssl-dev pandoc
               cmake --preset linux-release -DCMAKE_INSTALL_LIBDIR=lib
               cmake --build --preset linux-release --target vscpl2drv_mqtt vscpl2drv_mqtt_semaphore_test --parallel 2
               ctest --test-dir build --output-on-failure --timeout 20 -R "^driver-semaphore$" --no-tests=error

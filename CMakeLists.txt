@@ -181,3 +181,8 @@ else()
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 endif()
+
+# Man page (man/vscpl2drv-mqtt.1.md, converted with pandoc)
+if(UNIX)
+  add_subdirectory(man)
+endif()

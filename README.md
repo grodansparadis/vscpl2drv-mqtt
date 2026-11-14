@@ -73,12 +73,13 @@ Visual Studio/wxWidgets project is not used by CI.
 
 Checkout with
 
+```bash
 cd vscpl2drv-mqtt
 ./configure [-enable-debug]
 make install
 ```
 
-Uou need to install libmosquitto-dev and sudo apt install libexpat-dev with 
+You need to install libmosquitto-dev and sudo apt install libexpat-dev with 
 
 ```bash
 sudo apt install libmosquitto-dev

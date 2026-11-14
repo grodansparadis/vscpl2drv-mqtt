@@ -1,45 +1,219 @@
-% vscpl2drv-mqtt(1) VSCP Level II MQTT Driver
+% VSCPL2DRV-MQTT(1) VSCP Level II driver
 % Åke Hedman, Grodans Paradis AB
-% January 20, 2020
+% November 2026
 
 # NAME
 
-vscpl2drv-mqtt - VSCP Level I MQTT Driver
+vscpl2drv-mqtt - connect VSCP to an MQTT broker
 
 # SYNOPSIS
 
-vscpl2drv-mqtt
+**libvscpl2drv-mqtt.so** (Linux), **vscpl2drv-mqtt.dll** (Windows), **libvscpl2drv-mqtt.dylib** (macOS)
+
+A VSCP Level II driver. It is loaded by the VSCP daemon (**vscpd**(8)), VSCP Works or any other program that uses the VSCP Level II driver API, and is configured with the JSON configuration file described below. The path of the configuration file is given to the driver when it is opened (**path-config** in the daemon's driver configuration).
 
 # DESCRIPTION
 
-MQTT provides a lightweight method of carrying out messaging using a publish/subscribe model. This makes it suitable for "machine to machine" messaging such as with low power sensors or mobile devices such as phones, embedded computers or micro controllers like the Arduino. A good example of this is all of the work that Andy Stanford-Clark IBM (one of the originators of MQTT) has done in home monitoring and automation with his twittering house and twittering ferry. The MQTT protocol is now an ISO standard maintained by OASIS.
+The driver connects VSCP to an MQTT broker. It publishes the VSCP events it gets on configured topics and turns messages on subscribed topics into VSCP events, so VSCP nodes can talk with MQTT based systems. MQTT is a lightweight publish/subscribe protocol for machine to machine messaging; a broker such as Mosquitto passes the messages between the clients. The driver is configured with an XML file and with remote variables, see CONFIGURATION.
 
-This driver allow publishing of VSCP events as well as subscribing to VSCP events.
-To build and use the driver you need yo install the Mosquitto library. You can find instruction on how to do that [here](https://grodansparadis.gitbooks.io/the-vscp-daemon/installing_moquitto_for_use_with_vscp.md).
+# CONFIGURATION
 
-## Configuration string
+## Linux
 
-The configuration string have the following format
+### VSCP daemon driver config
+
+The VSCP daemon configuration is (normally) located at */etc/vscp/vscpd.conf*. To use the vscpl2drv-mqtt.so driver there must be an entry in the
 
 ```
-“sessionid";"subscribe”|”publish”;channel;host;user;password;keepalive;filter;mask
+> <level2driver enable="true">
 ```
 
-The first configuration parameter is a unique id like "mysession22" for your connection. The second parameter tell if the intention is to subscribe (“subscribe”) to an existing MQTT channel or to publish (“publish”) events on a channel. The second parameter is the topic. This is a text string identifying the topic. It is recommended that this string starts with “vscp/”. Host is the host where the MQTT broker is located (defaults to "localhost:1883"). Note that port must be included in the hostname. User/password is credentials for the channel if they are needed.
+section on the following format
 
-The configuration string is the first configuration data that is read. The driver will, after it is read, ask the server for driver specific configuration data. This data is fetched with the same pattern for all drivers. Variables are formed by the driver name + some driver specific variable name. If this variable exist and contains data this will be used as configuration for the driver.
+```xml
+<!-- Level II automation -->
+<driver enable="true"
+    name="link"
+    path-driver="/usr/lib/vscpl2drv-mqtt.so"
+    path-config="/var/lib/vscpl2drv-mqtt/drv.conf"
+    guid="FF:FF:FF:FF:FF:FF:FF:FC:88:99:AA:BB:CC:DD:EE:FF"
+</driver>
+```
 
-For the vscpl2drv-mqtt the following configuration variables are defined
+#### enable
+Set enable to "true" if the driver should be loaded.
 
-| Variable name | Type | Description |
-| ------------- | :--: | ----------- |
-| **_path** | string | Path to the logfile. |
-| **_rewrite** | bool | Set to “true” to rewrite the file each time the driver is started. Set to “false” to append to file. |
-| **_vscpworksfmt** | bool | If “true” VSCP works XML format will be used for the log file. This means that the file will be possible to read and further analyzed by VSCP Works. If “false” a standard text based format will be used. |
-| **_filter** | string | Standard VSCP filter in string from. 1,0x0000,0x0006,ff:ff:ff:ff:ff:ff:ff:01:00:00:00:00:00:00:00:00 as priority,class,type,GUID |
-| **_mask** | string | Standard VSCP mask in string form. 1,0x0000,0x0006,ff:ff:ff:ff:ff:ff:ff:01:00:00:00:00:00:00:00:00 as priority,class,type,GUID |
+#### name
+This is the name of the driver. Used when referring to it in different interfaces.
 
-## Remote variables
+#### path
+This is the path to the driver. If you install from a Debian package this will be */usr/bin/vscpl2drv-mqtt.so* and if you build and install the driver yourself it will be */usr/local/bin/vscpl2drv-mqtt.so* or a custom location if you configured that.
+
+#### guid
+All level II drivers must have a unique GUID. There is many ways to obtain this GUID, Read more [here](https://grodansparadis.gitbooks.io/the-vscp-specification/vscp_globally_unique_identifiers.html).
+
+### vscpl2drv-mqtt driver config
+
+```xml
+<config debug="true|false"
+            access="rw"
+            keepalive="true|false"
+            sub-filter="incoming-filter"
+            sub-mask="incoming-mask"
+            pub-filter="incoming-filter"
+            pub-mask="incoming-mask"
+            index="index identifying this driver"
+            zone="zone identifying this driver"
+            subzone="subzone identifying this driver"
+            sessionid=""
+            type="subscribe|publish"
+            topic="mqtt path"
+            prefix="mqtt part prefix"
+            remote-host=""
+            remote-port=""
+            remote-user=""
+            remote-password=""
+
+        <simple enable="true|false"
+                    vscpclass=""
+                    vscptype=""
+                    coding=""
+                    unit=""
+                    sensoridenx=""
+                    index=""
+                    zone=""
+                    subzone="" />
+    </config>
+```
+
+### debug
+Set to 'true' to get debug information written to syslog. Default is 'false' and no debug information written.
+
+### access
+Access tells what the driver can do with it's own configuration file. 
+
+A 'r' in the access string makes it possible to load a configurations file when the driver is live with the HLO 'load' command. 
+
+A 'w' in the access string makes it possible to write a configurations file when the driver is live with the HLO 'save' command.
+
+So an access string "rw" will allow both load and save of a configuration file. While "r" only allow read and "w" only allow write.
+
+### keepalive
+If _keepalive_ is set to zero a lost connection to the remote MQTT broker will disconnect forever. If _keepalive_ is set to a value this value is the time in seconds the driver will wait until it tries to reconnect to the remote mqtt broker.
+
+### sub-filter
+Event filter that together with the _rx-mask_ control which events should be received from the remote mqtt broker. 
+
+Can be used to limit the events that is recived on a subscribe channel.
+
+### sub-mask
+Event mask that together with the _rx-filter_ control which events should be received from the remote mqtt broker. 
+
+Can be used to limit the events that is recived on a subscribe channel.
+
+### pub-filter
+Event filter that together with the _tx-mask_ control which events should be sent to the remote mqtt broker. 
+
+Can be used to limit the events that is transmitted on a publishing channel.
+
+### pub-mask
+Event mask that together with the _tx-filter_ control which events should be sent to the remote mqtt broker. 
+
+Can be used to limit the events that is transmitted on a publishing channel.
+
+### index
+This is the index used for events originating from the driver itself. A typical example is the CLASS1.INFORMATION, Type=6, Node Heartbeat the driver send every minute.
+
+### zone
+This is the zone used for events originating from the driver itself. A typical example is the CLASS1.INFORMATION, Type=6, Node Heartbeat the driver send every minute.
+
+### subzone
+This is the subzone used for events originating from the driver itself. A typical example is the CLASS1.INFORMATION, Type=6, Node Heartbeat the driver send every minute.
+
+### sessionid
+This is a string that identify this client session. The first configuration parameter is a unique id like "mysession22" for your connection. 
+
+### type
+This value should either be 'subscribe', which also is default, or 'publish'. A _subscribe_ connection get events from a remote mqtt  broker. A _publish_ connection send events to a remote mqtt broker. 
+
+### topic
+This is the topic string used for subscribing pr publishing. 
+
+The default subscribing topic is 
+
+> /vscp/*
+
+This will receive all events that uis posten to topic _/vscp_ and all subtopics for this level. That is events published on _/vscp/guid/class_ and _/vscp/guid/class/type_ will be received.
+
+The default publishing topic (if topic is empty) is 
+
+> /vscp/guid/class/type
+
+where guid/class/type will be set to the guid, class and type of the published event.
+
+If set that topic will be used. That is no guid's, class, type will be added to the topic string on send.
+
+### prefix
+Prefix is a string used in front of any configured _topic_. This prefix is also prepended to an empty topic string.
+
+### remote-host
+This the address for the remote mqtt broker.
+
+### remote-port
+This is the port used for connections on the remote mqtt broker. Default is 1883 for a non-tls connection and 8883 for a tls connection.
+
+### remote-user
+This is the username needed to connect to the remote mqtt broker. If left empty no username/passord will be used.
+
+### remote-password
+This is the password needed to connect to the remote mqtt broker.
+
+### cafile
+path to a file containing the PEM encoded trusted CA certificate files.  Either cafile or capath must not be NULL.
+            
+### capath
+path to a directory containing the PEM encoded trusted CA certificate files.  See mosquitto.conf for more details on configuring this directory.  Either cafile or capath must not be NULL.
+            
+### certfile
+path to a file containing the PEM encoded certificate file for this client.  If NULL, keyfile must also be NULL and no client certificate will be used.
+            
+### keyfile
+path to a file containing the PEM encoded private key for this client.  If NULL, certfile must also be NULL and no client certificate will be used.
+
+## simple
+The _simple_ tag is used to configure parameters for the simple connection mode of the driver which can be used for VSCP measurement events. All other event types will be ignored when enabled. 
+
+In the simple mode pure measurement values are sent instead of evnets for both subscribe and publish modes.
+
+### enable
+Simple mode will be used if set to 'true'- Simple mode will not be used if set to 'false'.
+
+### vscpclass
+This is the VSCP class that should be used to generate the measurement value from. It can be any of the measurement classes.
+
+### vscpclass
+This is the VSCP tyoe of the VSCO class that should be used to generate the measurement value from. It can be any of the types from a measurement classes.
+
+### coding
+Not used at the moment
+
+### unit
+This is the _unit_ the measurement event should have. If it has another unit it will be thrown away. Default is zero.
+
+### sensorindex
+This is the _sensorindex_ the measurement event should have. If it has another sensorindex it will be thrown away. Default is zero.
+
+### index
+This is the _index_ the measurement event should have. If it has another index it will be thrown away. For a measurement class that does not use an index it is not used. Default is zero.
+
+### zone
+This is the _zone_ the measurement event should have. If it has another zone it will be thrown away. For a measurement class that does not use an zone it is not used. Default is zero.
+
+### subzone
+This is the _subzone_ the measurement event should have. If it has another subzone it will be thrown away. For a measurement class that does not use an subzone it is not used. Default is zero.
+
+## Windows
+t.b.d.
 
 | Variable name  | Type    | Description   |
  | -------------  | ----    | -----------  |
@@ -70,7 +244,7 @@ and so on.
 
 If your driver name contains spaces, for example “name of driver” it will get a prefix that is “name_of_driver”. Leading and trailing spaces will be removed.
 
-### _simplify
+## _simplify
 
 If this variable is defined it will simplify the effort to publish measurement or subscribe to measurement information. It makes it as simple as 1-2-3 and allows for  sending just numbers over MQTT but still get valid events into the system. The functionality works also the other way around  so measurement events can send data over MQTT as just a number possibly using the MQTT topic as a way to tell what is sent.
 
@@ -114,79 +288,9 @@ The variable format is
 
 ([VSCP types are here](https://grodansparadis.gitbooks.io/the-vscp-specification/class1.measurement.html))
 
-## vscpd.conf example
+You can find the documentation for the driver here
 
-```xml
-<driver enable="true" >
-    <name>mqtt1`</name>
-    <path>/usr/local/lib/vscp2drv_mqtt.so</path>
-    <config>"mysession1";publish;vscp;localhost:1883</config>
-    <guid>`00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00</guid>
-</driver>
-```
-
-The format for data on the MQTT wire is the same as the format for sends and receives in the TCP/IP interface. This means they look like this
-
-> head,class,type,obid,datetime,timestamp,GUID,data0,data1,data2,...
-
-and as usual the GUID can be replaced by “-” to use the interface GUID.
-
-Using the methods
-
-- vscphlp_writeVscpEventToString
-- vscphlp_writeVscpEventExToString
-- vscphlp_setVscpEventFromString
-- vscphlp_setVscpEventExFromString
-
-available in the vscphelper library (C/C++/C#/Python/PHP/node.js) it is easy to convert between VSCP Event and text form. It is also very easy to get other properties from the event such as real number measurement with the help of the same library.
-
-# Using the MQTT driver
-
-MQTT is a protocol for M2M by IBM. This driver makes it possible to use MQTT as the transport for VSCP events. As MQTT, with the help of IBM's muscle mass, is available on many, many platforms this can be a way to enter events into or fetch events from the VSCP framework. Thus any device that can use MQTT can connect to a websocket button or show it's data in a table or log data to a database.
-
-For measurements it be as easy as 1-2-3. You just send or fetch data and the driver do the VSCP translations to full events for you.
-
-## Setting up the needed MQTT subsystem
-
-*This has been tested on several Debian and Ubuntu boxes and on a Rasbian driven Raspberry Pi board. On all I tested you can jump directly to step 4. If that does not work start at step 1.*
-
-To use the driver the MQTT [ Mosquitto](https://mosquitto.org/ ) or similar broker is needed. To do this follow the steps below. Taken from [here](installing_moquitto_for_use_with_vscp.md)
-
-##### Install a MQTT broker and a client
-
-Install the Mosquitto server and clients
-
-> $ sudo apt install mosquitto
-> $ sudo apt install mosquitto-clients
-
-You are now ready to use the MQTT subsystem.
-
-To test that everything works you can now open a terminal window and issue
-
-> $ mosquitto_sub -d -t hello/world
-
-to subscribe to the **hello/world** channel. And then open another terminal window and issue
-
-> $ mosquitto_pub -d -t hello/world -m "Hello World"
-
-if everything works "Hello World" will come up in the subscribe window. You can of course do this on different machines also. On one machine issue
-
-> $ mosquitto_sub -h YOUR_HOST_IP_ADDRESS -d -t hello/world
-
-and on the other issue
-
-> $ mosquitto_pub -d -t hello/world -m "Hello World"
-
-as before. If this does not work you may need to open the 1883 port in your firewall. For this use
-
-> sudo iptables -A INPUT -p tcp -m tcp --dport 1883 -j ACCEPT
-
-
-## Setting up the MQTT driver
-
-You can find the documentation for the driver [here](./level2_driver_mqtt.md)
-
-### Publish
+## Publish
 
 The first thing you should do is to add the driver to the VSCP daemon configuration file. To do this look up the `<vscpdriver>`  ...  `</vscpdriver>` tags in the file and add
 
@@ -229,7 +333,6 @@ Events is presented in the form
 
 by default (this can be changed see below). You can use the  helper library and the methods
 
-
 *  writeVscpEventToString
 *  writeVscpEventExToString
 *  getVscpEventFromString
@@ -249,11 +352,9 @@ replacing
 
 with your actual host and port. This will show something like this
 
-   ![interfaces2.png](./images/interfaces2.png)
-
 where the driver with the name you given it will be visible in the list.
 
-### Subscribe
+## Subscribe
 
 To subscribe to events on a channel use *subscribe* instead of *publish* above.
 
@@ -299,9 +400,7 @@ or
 
 if you want to fetch 25 or all that is collected. You can also use
 
-
 > $ rcvloop
-
 
 to see incoming events (use 'quitloop' to terminate the loop). The "+OK" you may see from time to time is a way for M2M routines to know the line is open as this is intended for machines.
 
@@ -314,7 +413,6 @@ head,class,type,obid,datetime,timestamp,GUID,data0,data1,data2,...........
 All command of the daemon is described [here](./tcp_ip_control_interface.md).
 
 ### Using remote variables
-
 
 The configure string in the VSCP daemon driver configuration can be replaced by VSCP variables instead. Actually a value specified in a variable will be used before a value in a configuration string. So if you have both the variable value will have precedence.
 
@@ -350,23 +448,17 @@ but is is probably easier to use the built in web interface of the daemon to do 
 
 replacing [http://localhost:8884](http://localhost:8884) with your actual *host* and *port*.
 
-
 In this first screen you select the value to be a *string* and then move on with the *next*  button \\
 
 ![](./images/drivers/mqtt/variable_string_edit_step1.png)
-
-
 
 In the next screen you enter the name and the value for the variable as you did above and also make sure to mark persistent so the variable will be saved and thus available also after the daemon has been restarted. When you are ready press save
 
 [](./images/drivers/mqtt/variable_string_edit_step2.png)
 
-
 which will take you back to the variable list where you can click on any item to edit it.
 
-
 [](./images/drivers/mqtt/variable_string_edit_step3.png)
-
 
 ### Example: Subscribing
 
@@ -411,7 +503,6 @@ The lowest three bits are all zero here but could have been an index (0-7) to a 
 
 ### More to read
 
-
 * [Using the VSCP MQTT driver Part 1](https://grodansparadis.com/wordpress/?p=1533)
 * [Using the VSCP MQTT driver Part 2](https//grodansparadis.com/wordpress/?p=1528)
 * MQ Telemetry Transport - https://mqtt.org/
@@ -420,31 +511,22 @@ The lowest three bits are all zero here but could have been an index (0-7) to a 
 *  Using the API - https://www.eclipse.org/paho/files/mqttdoc/Cclient/
 *  MQTT på arduino - https://knolleary.net/arduino-client-for-mqtt/
 
+### Copyright
+Copyright (C) 2000-2020 Ake Hedman, Grodans Paradis AB - MIT license.
 
----
+# FILES
 
-There are many Level I drivers available in VSCP & Friends framework that can be used with both VSCP Works and the VSCP Daemon and added to that Level II and Level III drivers that can be used with the VSCP Daemon.
-
-Level I drivers is documented [here](https://grodansparadis.gitbooks.io/the-vscp-daemon/level_i_drivers.html).
-
-Level II drivers is documented [here](https://grodansparadis.gitbooks.io/the-vscp-daemon/level_ii_drivers.html)
-
-Level III drivers is documented [here](https://grodansparadis.gitbooks.io/the-vscp-daemon/level_iii_drivers.html)
+*/var/lib/vscp/drivers/level2/libvscpl2drv-mqtt.so*
+:   The driver (Linux).
 
 # SEE ALSO
 
-`vscpd` (8).
-`uvscpd` (8).
-`vscpworks` (1).
-`vscpcmd` (1).
-`vscp-makepassword` (1).
-`vscphelperlib` (1).
+**vscpd**(8), **vscp-dump**(1), **vscp-send**(1), **vscpl2drv-socketcan**(1), **vscpl2drv-tcpipsrv**(1)
 
-The VSCP project homepage is here <https://www.vscp.org>.
+The source code and the full documentation: <https://github.com/grodansparadis/vscpl2drv-mqtt>
 
-The [manual](https://grodansparadis.gitbooks.io/the-vscp-daemon) for vscpd contains full documentation. Other documentation can be found here <https://grodansparadis.gitbooks.io>.
-
-The vscpd source code may be downloaded from <https://github.com/grodansparadis/vscp>. Source code for other system components of VSCP & Friends are here <https://github.com/grodansparadis>
+The VSCP specification: <https://grodansparadis.github.io/vscp-doc-spec>
 
 # COPYRIGHT
-Copyright 2000-2019 Åke Hedman, Grodans Paradis AB - MIT license.
+
+Copyright 2000-2026 Åke Hedman, Grodans Paradis AB. See the LICENSE file of the driver.
