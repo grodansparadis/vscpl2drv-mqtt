@@ -159,7 +159,7 @@ if (WIN32)
     target_compile_definitions(vscpl2drv_mqtt_semaphore_test PRIVATE WIN32)
     target_include_directories(vscpl2drv_mqtt_semaphore_test PRIVATE
         ${CMAKE_SOURCE_DIR}/compat
-        ${THIRD_PARTY_VSCP_DIR}/src/vscp/daemon
+        ${THIRD_PARTY_VSCP_DIR}/src/common/windows
     )
     if (MINGW)
         target_compile_options(vscpl2drv_mqtt_semaphore_test PRIVATE
