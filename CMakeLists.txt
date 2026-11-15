@@ -40,6 +40,12 @@ list(APPEND CMAKE_MODULE_PATH "${THIRD_PARTY_VSCP_DIR}/cmake/modules")
 find_package(OpenSSL REQUIRED)
 find_package(EXPAT REQUIRED)
 find_package(Mosquitto REQUIRED)
+# Newer libmosquitto headers include cjson/cJSON.h, which Homebrew keeps
+# outside the compiler search path
+find_path(CJSON_INCLUDE_DIR cjson/cJSON.h HINTS /opt/homebrew/include /usr/local/include)
+if(CJSON_INCLUDE_DIR)
+    list(APPEND MOSQUITTO_INCLUDE_DIRS ${CJSON_INCLUDE_DIR})
+endif()
 find_package(Threads REQUIRED)
 
 find_library(RT_LIBRARY rt)
@@ -88,7 +94,7 @@ if (WIN32)
         VSCP_HELPER_LOGGING_EXPORTS VSCP_HELPER_LOGGING_BACKEND_EXPORTS)
     target_include_directories(vscpl2drv_mqtt PRIVATE
         ${CMAKE_SOURCE_DIR}/compat
-        ${THIRD_PARTY_VSCP_DIR}/src/vscp/daemon
+        ${THIRD_PARTY_VSCP_DIR}/src/common/windows
     )
     if (MINGW)
         target_compile_options(vscpl2drv_mqtt PRIVATE

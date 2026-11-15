@@ -22,7 +22,8 @@ foreach(_page IN LISTS MAN_PAGES)
     COMMENT "Man page ${_page}"
     VERBATIM)
   list(APPEND _man_outputs ${CMAKE_CURRENT_BINARY_DIR}/${_page})
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${_page} DESTINATION ${CMAKE_INSTALL_MANDIR}/man${_section})
+  # OPTIONAL: builds of single targets (CI) do not make the man pages
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${_page} DESTINATION ${CMAKE_INSTALL_MANDIR}/man${_section} OPTIONAL)
 endforeach()
 
 add_custom_target(man ALL DEPENDS ${_man_outputs})

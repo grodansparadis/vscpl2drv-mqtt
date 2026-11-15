@@ -42,7 +42,7 @@ jobs:
 
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
-        run: brew install expat mosquitto openssl@3
+        run: brew install cjson expat mosquitto openssl@3
 
       - name: Configure Linux
         if: runner.os == 'Linux'
