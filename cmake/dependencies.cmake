@@ -28,11 +28,11 @@ if(NOT CMAKE_VERSION VERSION_LESS "3.24")
     list(APPEND _tp_options DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 endif()
 
-# grodansparadis/vscp @ 43d0c8439b4c0e8753f400767e11ea1549892c39
+# grodansparadis/vscp @ d75d4f5c6c097a1dca841b63727c79c522b701ce (master)
 FetchContent_Declare(
     tp_vscp
-    URL https://codeload.github.com/grodansparadis/vscp/tar.gz/43d0c8439b4c0e8753f400767e11ea1549892c39
-    URL_HASH SHA256=863b3e5c97baaa0246350e684207c09fa0d936d076205eb596c86e7337ff89ef
+    URL https://codeload.github.com/grodansparadis/vscp/tar.gz/d75d4f5c6c097a1dca841b63727c79c522b701ce
+    URL_HASH SHA256=709763c16c995b65787e72947f9c3f45a03a404c708286c7cad00b53dcaedbb5
     ${_tp_options}
 )
 # fmtlib/fmt @ 4f645a8d5d7aa6f8c5ba57e9af0396e4761d3f81
