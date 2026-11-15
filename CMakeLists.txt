@@ -91,7 +91,8 @@ target_compile_definitions(vscpl2drv_mqtt PRIVATE
 
 if (WIN32)
     target_compile_definitions(vscpl2drv_mqtt PRIVATE WIN32
-        VSCP_HELPER_LOGGING_EXPORTS VSCP_HELPER_LOGGING_BACKEND_EXPORTS)
+        VSCP_HELPER_LOGGING_EXPORTS VSCP_HELPER_LOGGING_BACKEND_EXPORTS
+        _CRT_RAND_S) # rand_s; the MinGW pre-include pulls in stdlib.h first
     target_include_directories(vscpl2drv_mqtt PRIVATE
         ${CMAKE_SOURCE_DIR}/compat
         ${THIRD_PARTY_VSCP_DIR}/src/common/windows
