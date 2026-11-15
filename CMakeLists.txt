@@ -52,7 +52,9 @@ add_library(vscpl2drv_mqtt SHARED
     ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/vscpdatetime.cpp
     ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/guid.cpp
     ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/hlo.cpp
-    ${THIRD_PARTY_VSCP_DIR}/src/common/sockettcp.c
+    ${THIRD_PARTY_VSCP_DIR}/src/common/vscphelper-common.cpp
+    ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/vscphelperlogging.cpp
+    ${THIRD_PARTY_VSCP_DIR}/src/vscp/common/vscphelperlogging-forward.cpp
     ${THIRD_PARTY_VSCP_DIR}/src/common/vscp-aes.c
     ${THIRD_PARTY_VSCP_DIR}/src/common/crc.c
     ${THIRD_PARTY_VSCP_DIR}/src/common/crc8.c
@@ -82,7 +84,8 @@ target_compile_definitions(vscpl2drv_mqtt PRIVATE
 )
 
 if (WIN32)
-    target_compile_definitions(vscpl2drv_mqtt PRIVATE WIN32)
+    target_compile_definitions(vscpl2drv_mqtt PRIVATE WIN32
+        VSCP_HELPER_LOGGING_EXPORTS VSCP_HELPER_LOGGING_BACKEND_EXPORTS)
     target_include_directories(vscpl2drv_mqtt PRIVATE
         ${CMAKE_SOURCE_DIR}/compat
         ${THIRD_PARTY_VSCP_DIR}/src/vscp/daemon
